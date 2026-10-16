@@ -18,7 +18,7 @@
 | 輸入 | Pointer Events（滑鼠與觸控共用）＋鍵盤 | PLT-3, UI-3 | ADR-004 |
 | 調參面板 | lil-gui，只在網址帶 `?debug` 時載入 | SHOT-4, ACC-1 | ADR-006 |
 | 測試 | Vitest（純邏輯單元測試） | ACC-1 | — |
-| 部署 | GitHub Pages（GitHub Actions 自動部署） | PLT-1, ACC-1 | ADR-005 |
+| 部署 | 暫不部署；試玩透過區網內的開發伺服器（`dist/` 是純靜態檔，日後可放到任何靜態主機） | PLT-1, ACC-1 | ADR-005 |
 
 ## 模組結構
 
@@ -136,7 +136,6 @@ Spec 有很多項目要「實際遊玩後逐步決定」（SHOT-2、SHOT-4、LVL
 ### 開發與驗收（ACC-1）
 
 - `npm run dev` 會帶 `--host` 啟動，手機連同一個 Wi-Fi，開啟終端機顯示的 Network 網址即可試玩。
-- 推送到 main 後，GitHub Actions 會依序測試、建置，再部署到 GitHub Pages。
 - 「新地圖」會換一個 seed 並重新載入；完成畫面可以選「再玩這張地圖」。
 
 ## 已知限制

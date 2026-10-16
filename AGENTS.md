@@ -45,3 +45,10 @@ City Golf：一款單人網頁遊戲。玩家在粗糙風格的 3D 方塊城市�
 
 - 文件以繁體中文撰寫。
 - 程式碼識別字、程式註解、commit message 使用英文。
+
+## 版本
+
+- App 版本採用 Semantic Versioning，以 annotated git tag（`vX.Y.Z`）標記，並與 `package.json` 的 `version` 保持一致。
+- 核心玩法定案前停留在 0.x：每完成一個可試玩驗收的里程碑升 minor，只修 bug、不改玩法升 patch。何時升到 1.0.0 由使用者決定。
+- App 版本與 spec 版本各自獨立。tag 的說明要寫明對應的 spec 版本、完成的 spec 條目，以及已知限制。
+- 只有使用者要求時才打 tag。

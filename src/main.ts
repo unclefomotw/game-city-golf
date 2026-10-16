@@ -131,7 +131,8 @@ function syncPanel(phase: Phase): void {
 
 // --- Input on the square view -------------------------------------------------------
 const ballScreen = new THREE.Vector3();
-const input = new ViewInput(viewEl, {
+// Bound to the canvas, not #view, so overlays (e.g. the win card) keep their own clicks.
+const input = new ViewInput(canvas, {
   aimAnchor: () => {
     if (game.phase !== 'aiming' || rig.mode !== 'orbit') return null;
     ballScreen.copy(game.ball.pos).project(view.camera);

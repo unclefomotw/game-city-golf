@@ -19,3 +19,7 @@ npm run build    # 型別檢查＋建置到 dist/
 
 - `?seed=1234`：指定地圖代號
 - `?debug`：開啟調參面板
+
+## 授權
+
+[MIT](LICENSE)

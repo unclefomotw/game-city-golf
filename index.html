@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#1d2433" />
+    <title>City Golf</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⛳</text></svg>" />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="view">
+        <canvas id="canvas"></canvas>
+        <div id="toast"></div>
+        <div id="win" hidden>
+          <div class="card">
+            <h2>完成！</h2>
+            <p id="win-text"></p>
+            <div class="row">
+              <button id="replay">再玩這張地圖</button>
+              <button id="win-new" class="primary">新地圖</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel">
+        <div class="stats">
+          <div><span>地圖</span><b id="seed"></b></div>
+          <div><span>桿數</span><b id="strokes">0</b></div>
+          <div><span>破壞分數</span><b id="score">0</b></div>
+        </div>
+
+        <section id="aim-controls">
+          <div class="aim-sliders">
+            <label class="slider">
+              <span>力道 <b id="power-val"></b></span>
+              <input id="power" type="range" min="0" max="100" step="1" />
+            </label>
+            <label class="slider">
+              <span>仰角 <b id="elev-val"></b></span>
+              <input id="elev" type="range" min="-45" max="89" step="1" />
+            </label>
+            <div class="direction">
+              <span>方向</span>
+              <button id="az-left" aria-label="向左轉">◀</button>
+              <b id="az-val"></b>
+              <button id="az-right" aria-label="向右轉">▶</button>
+            </div>
+          </div>
+          <div class="spin">
+            <canvas id="spin-pad" title="點選擊球點：左右＝側旋，上＝上旋，下＝下旋"></canvas>
+            <div class="spin-label">旋轉 <b id="spin-val"></b></div>
+            <button id="spin-reset">歸零</button>
+          </div>
+        </section>
+
+        <section id="free-controls" hidden>
+          <div id="joystick"><div class="knob"></div></div>
+          <div class="updown">
+            <button id="fly-up">上升</button>
+            <button id="fly-down">下降</button>
+          </div>
+        </section>
+
+        <button id="fire" class="primary">擊球</button>
+        <div class="actions">
+          <button id="penalty">罰桿・回上一位</button>
+          <button id="ghost">靈魂出竅</button>
+          <button id="new-map">新地圖</button>
+        </div>
+        <p id="hint"></p>
+      </div>
+    </div>
+    <script type="module" src="./src/main.ts"></script>
+  </body>
+</html>

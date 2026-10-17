@@ -75,18 +75,27 @@ body {
   gap: 8px;
 }
 
+/* Icon and value share one row to keep the stats strip short. */
 .stats div {
   display: flex;
-  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 0;
   background: var(--bg);
   border-radius: 8px;
   padding: 4px;
 }
 
-.stats span {
-  font-size: 12px;
-  color: var(--muted);
+.stats svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .stats b {

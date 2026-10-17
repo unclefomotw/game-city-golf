@@ -27,15 +27,23 @@
 
       <div id="panel">
         <div class="stats">
-          <div><span>地圖</span><b id="seed"></b></div>
-          <div><span>桿數</span><b id="strokes">0</b></div>
-          <div><span>破壞分數</span><b id="score">0</b></div>
+          <div title="地圖">
+            <svg viewBox="0 0 24 24" role="img" aria-label="地圖"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Zm0 0v14m6-12v14" /></svg>
+            <b id="seed"></b>
+          </div>
+          <div title="桿數">
+            <svg viewBox="0 0 24 24" role="img" aria-label="桿數"><path d="M7 21V3l10 4-10 4M4 21h10" /></svg>
+            <b id="strokes">0</b>
+          </div>
+          <div title="破壞分數">
+            <svg viewBox="0 0 24 24" role="img" aria-label="破壞分數"><path d="m12 2 2 6 6-3-3 6 5 2-5 2 3 6-6-3-2 6-2-6-6 3 3-6-5-2 5-2-3-6 6 3 2-6Z" /></svg>
+            <b id="score">0</b>
+          </div>
         </div>
 
         <section id="aim-controls">
           <div class="aim-dir">
             <div id="aim-stick" class="stick" title="左右＝轉水平方向，上下＝調仰角；推越遠轉越快"><div class="knob"></div></div>
-            <div class="readout"><span>方向</span> <b id="az-val"></b></div>
             <div class="readout"><span>仰角</span> <b id="elev-val"></b></div>
           </div>
           <label class="slider power">
@@ -44,7 +52,7 @@
           </label>
           <div class="spin">
             <canvas id="spin-pad" title="點選擊球點：左右＝側旋，上＝上旋，下＝下旋"></canvas>
-            <div class="spin-label">旋轉 <b id="spin-val"></b></div>
+            <div class="spin-label">旋球</div>
             <button type="button" id="spin-reset">歸零</button>
           </div>
         </section>

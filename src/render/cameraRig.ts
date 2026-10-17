@@ -122,7 +122,14 @@ export class CameraRig {
     } else {
       const c = this.cfg.camera;
       const speed = c.freeSpeed * (move.fast ? c.freeFastMultiplier : 1) * dt;
-      const forward = new THREE.Vector3(-Math.sin(this.freeYaw), 0, -Math.cos(this.freeYaw));
+      // Forward follows the view, pitch included, so looking down and moving
+      // forward descends (ADR-011). Strafe and up/down stay level/vertical.
+      const cp = Math.cos(this.freePitch);
+      const forward = new THREE.Vector3(
+        -Math.sin(this.freeYaw) * cp,
+        Math.sin(this.freePitch),
+        -Math.cos(this.freeYaw) * cp,
+      );
       const right = new THREE.Vector3(Math.cos(this.freeYaw), 0, -Math.sin(this.freeYaw));
       this.freePos
         .addScaledVector(forward, move.forward * speed)

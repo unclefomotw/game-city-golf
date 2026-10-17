@@ -3,6 +3,7 @@
 
 import GUI from 'lil-gui';
 import type { Config } from '../config';
+import { MATERIAL_LABELS, MATERIALS } from '../world/materials';
 
 export function createTuningPanel(cfg: Config): void {
   const gui = new GUI({ title: '調參（debug）' });
@@ -27,10 +28,21 @@ export function createTuningPanel(cfg: Config): void {
   rest.close();
 
   const d = gui.addFolder('破壞');
-  d.add(cfg.destruction, 'minSpeed', 0, 40, 0.5);
   d.add(cfg.destruction, 'radiusPerSpeed', 0, 0.3, 0.005);
   d.add(cfg.destruction, 'maxRadius', 0.5, 6, 0.1);
-  d.add(cfg.destruction, 'speedKeptPerCell', 0.9, 1, 0.001);
+
+  // DES-8, ADR-019: bounciness and fragility per building material.
+  const mats = gui.addFolder('材質');
+  for (const kind of MATERIALS) {
+    const m = mats.addFolder(MATERIAL_LABELS[kind]);
+    m.add(cfg.materials[kind], 'restitution', 0, 1, 0.01).name('反彈係數');
+    m.add(cfg.materials[kind], 'bounceFriction', 0, 1, 0.01).name('反彈摩擦');
+    m.add(cfg.materials[kind], 'minSpeed', 0, 45, 0.5).name('破壞門檻速度');
+    m.add(cfg.materials[kind], 'radiusScale', 0, 3, 0.05).name('挖洞半徑倍率');
+    m.add(cfg.materials[kind], 'speedKeptPerCell', 0.8, 1, 0.001).name('穿透每格保留速度');
+    m.close();
+  }
+  mats.close();
 
   gui.add(cfg.preview, 'seconds', 0, 3, 0.05).name('預覽秒數');
   gui.add(cfg.preview, 'farOpacity', 0, 1, 0.05).name('預覽遠端透明度');

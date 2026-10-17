@@ -4,7 +4,8 @@
 
 import { Vector3 } from 'three';
 import type { Config, SurfaceKind } from '../config';
-import type { RemovedCell, SolidQuery } from '../world/voxelGrid';
+import { DEFAULT_MATERIAL, type MaterialOf } from '../world/materials';
+import type { CellCoord, RemovedCell, SolidQuery } from '../world/voxelGrid';
 
 const UP = new Vector3(0, 1, 0);
 
@@ -38,7 +39,11 @@ export type SimEvent =
 
 export type World = {
   solids: SolidQuery;
+  /** DES-8: material of each building cell; every cell counts as DEFAULT_MATERIAL when omitted. */
+  materialOf?: MaterialOf;
 };
+
+const defaultMaterialOf: MaterialOf = () => DEFAULT_MATERIAL;
 
 export function horizontalDir(azimuth: number): Vector3 {
   return new Vector3(Math.sin(azimuth), 0, -Math.cos(azimuth));
@@ -64,6 +69,8 @@ export function launch(start: Vector3, shot: ShotInput, cfg: Config): BallState 
 }
 
 type Contact = { normal: Vector3; depth: number; surface: SurfaceKind };
+/** A building contact also names the most deeply touched cell, whose material it uses. */
+type BuildingContact = Contact & { cell: CellCoord };
 
 const tmp = new Vector3();
 const tmp2 = new Vector3();
@@ -82,9 +89,11 @@ function boundaryContacts(pos: Vector3, r: number, solids: SolidQuery, out: Cont
 }
 
 /** Merges all overlapping building cells into one contact (or null). */
-function buildingContact(pos: Vector3, r: number, solids: SolidQuery): Contact | null {
+function buildingContact(pos: Vector3, r: number, world: World): BuildingContact | null {
+  const { solids } = world;
   const normal = new Vector3();
   let maxDepth = 0;
+  const deepest = { x: 0, y: 0, z: 0 };
   const x0 = Math.floor(pos.x - r),
     x1 = Math.floor(pos.x + r);
   const y0 = Math.floor(pos.y - r),
@@ -124,28 +133,53 @@ function buildingContact(pos: Vector3, r: number, solids: SolidQuery): Contact |
           depth = options[0][0] + r;
         }
         normal.addScaledVector(n, depth);
-        maxDepth = Math.max(maxDepth, depth);
+        if (depth > maxDepth) {
+          maxDepth = depth;
+          Object.assign(deepest, { x, y, z });
+        }
       }
   if (maxDepth === 0 || normal.lengthSq() < 1e-12) return null;
-  return { normal: normal.normalize(), depth: maxDepth, surface: 'building' };
+  const materialOf = world.materialOf ?? defaultMaterialOf;
+  const surface = materialOf(solids.get(deepest.x, deepest.y, deepest.z));
+  return { normal: normal.normalize(), depth: maxDepth, surface, cell: deepest };
 }
 
-/** DES-2/DES-3: digs a roughly spherical hole around the impact point. */
-function dig(solids: SolidQuery, impact: Vector3, radius: number): RemovedCell[] {
+/**
+ * DES-2/DES-3/DES-8: digs a roughly spherical hole around the impact point.
+ * Each cell's material sets its own damage threshold and hole radius, so one
+ * hit can shatter glass yet stop at a metal wall. The touched cell always
+ * breaks once the impact beats its material's threshold.
+ */
+function dig(world: World, cfg: Config, impact: Vector3, speed: number, touched: CellCoord): RemovedCell[] {
+  const { solids } = world;
+  const materialOf = world.materialOf ?? defaultMaterialOf;
+  const d = cfg.destruction;
   const removed: RemovedCell[] = [];
-  const reach = Math.ceil(radius);
+  const reach = Math.ceil(d.maxRadius * Math.max(...Object.values(cfg.materials).map((m) => m.radiusScale)));
   const cx = Math.floor(impact.x),
     cy = Math.floor(impact.y),
     cz = Math.floor(impact.z);
   for (let y = cy - reach; y <= cy + reach; y++)
     for (let z = cz - reach; z <= cz + reach; z++)
       for (let x = cx - reach; x <= cx + reach; x++) {
-        const d = Math.hypot(x + 0.5 - impact.x, y + 0.5 - impact.y, z + 0.5 - impact.z);
-        if (d > radius) continue;
-        const id = solids.remove(x, y, z);
-        if (id) removed.push({ x, y, z, id });
+        const id = solids.get(x, y, z);
+        if (!id) continue;
+        const material = materialOf(id);
+        const m = cfg.materials[material];
+        if (speed <= m.minSpeed) continue;
+        const radius = Math.min(d.maxRadius, speed * d.radiusPerSpeed) * m.radiusScale;
+        const isTouched = x === touched.x && y === touched.y && z === touched.z;
+        if (!isTouched && Math.hypot(x + 0.5 - impact.x, y + 0.5 - impact.y, z + 0.5 - impact.z) > radius) continue;
+        solids.remove(x, y, z);
+        removed.push({ x, y, z, id, material });
       }
   return removed;
+}
+
+function surfaceParams(surface: SurfaceKind, cfg: Config): { restitution: number; bounceFriction: number } {
+  if (surface === 'ground' || surface === 'boundary')
+    return { restitution: cfg.physics.restitution[surface], bounceFriction: cfg.physics.bounceFriction[surface] };
+  return cfg.materials[surface];
 }
 
 function resolveContact(s: BallState, c: Contact, cfg: Config, h: number, events?: SimEvent[]): boolean {
@@ -158,8 +192,9 @@ function resolveContact(s: BallState, c: Contact, cfg: Config, h: number, events
   const spinTangent = s.spin.clone().cross(c.normal); // topspin -> forward, backspin -> backward
   if (-vn > p.rollThreshold) {
     // Bounce.
-    vN.multiplyScalar(-p.restitution[c.surface]);
-    vT.multiplyScalar(p.bounceFriction[c.surface]).addScaledVector(spinTangent, p.contactSpinK);
+    const { restitution, bounceFriction } = surfaceParams(c.surface, cfg);
+    vN.multiplyScalar(-restitution);
+    vT.multiplyScalar(bounceFriction).addScaledVector(spinTangent, p.contactSpinK);
     s.spin.multiplyScalar(p.contactSpinRetain);
     events?.push({ type: 'bounce', surface: c.surface, speed: -vn });
     s.vel.addVectors(vN, vT);
@@ -172,6 +207,9 @@ function resolveContact(s: BallState, c: Contact, cfg: Config, h: number, events
   s.vel.copy(vT);
   return c.normal.y > 0.5;
 }
+
+/** Below the weakest material's threshold nothing can break, so digging is skipped (e.g. while rolling). */
+const minDamageSpeed = (cfg: Config) => Math.min(...Object.values(cfg.materials).map((m) => m.minSpeed));
 
 /** Advances the ball by one fixed timestep. */
 export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[]): void {
@@ -195,19 +233,17 @@ export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[
     grounded = false;
     const contacts: Contact[] = [];
     boundaryContacts(s.pos, r, world.solids, contacts);
-    let bc = buildingContact(s.pos, r, world.solids);
+    let bc = buildingContact(s.pos, r, world);
     if (bc) {
       const impactSpeed = -s.vel.dot(bc.normal);
-      if (impactSpeed > cfg.destruction.minSpeed) {
-        const d = cfg.destruction;
-        const radius = Math.min(d.maxRadius, impactSpeed * d.radiusPerSpeed);
+      if (impactSpeed > minDamageSpeed(cfg)) {
         const impact = s.pos.clone().addScaledVector(bc.normal, -r);
-        const cells = dig(world.solids, impact, radius);
+        const cells = dig(world, cfg, impact, impactSpeed, bc.cell);
         if (cells.length) {
           events?.push({ type: 'destroy', cells, impact, speed: impactSpeed });
-          bc = buildingContact(s.pos, r, world.solids);
+          bc = buildingContact(s.pos, r, world);
           // Punched through: the ball keeps going, slowed by what it smashed.
-          if (!bc) s.vel.multiplyScalar(d.speedKeptPerCell ** cells.length);
+          if (!bc) for (const c of cells) s.vel.multiplyScalar(cfg.materials[c.material].speedKeptPerCell);
         }
       }
       if (bc) contacts.push(bc);
@@ -238,15 +274,8 @@ export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[
  * The path ends at the first impact (bounce or destruction), so the preview
  * never reveals how the ball will rebound.
  */
-export function previewPath(
-  start: Vector3,
-  shot: ShotInput,
-  solids: SolidQuery,
-  cfg: Config,
-  seconds: number,
-): Vector3[] {
+export function previewPath(start: Vector3, shot: ShotInput, world: World, cfg: Config, seconds: number): Vector3[] {
   const s = launch(start, shot, cfg);
-  const world = { solids };
   const points = [s.pos.clone()];
   const steps = Math.round(seconds / cfg.physics.dt);
   const events: SimEvent[] = [];

@@ -1,6 +1,7 @@
 // Procedural city generation (LVL-1 ~ LVL-3).
 
 import { createRng, type Rng } from '../core/rng';
+import type { MaterialKind } from './materials';
 import { VoxelGrid } from './voxelGrid';
 
 export const GROUND_ROAD = 1;
@@ -9,7 +10,8 @@ export const GROUND_PLAZA = 2;
 /** Distance markings in developer test scenes (ADR-010). */
 export const GROUND_MARK = 3;
 
-export type Building = { id: number; color: number };
+/** VIS-3: one material per building (one footprint rectangle). */
+export type Building = { id: number; material: MaterialKind };
 
 export type Level = {
   seed: number;
@@ -48,9 +50,25 @@ const GOAL_RADIUS = 3;
 /** The goal center is at least this share of the farthest possible goal distance from the tee. */
 const GOAL_MIN_DIST = 0.75;
 
-const BUILDING_COLORS = [
-  0xd9826b, 0xe0b46c, 0x8fb3c9, 0xa3c48f, 0xc9a0c9, 0xe8e2d0, 0x9aa3b5, 0xd6c27a, 0x7fb8a8, 0xcf8f8f,
-];
+/**
+ * VIS-3: relative odds of each material, for low buildings and for towers.
+ * Towers lean to glass, metal and stone; low buildings to wood and brick.
+ */
+const MATERIAL_WEIGHTS: Record<'low' | 'tall', Record<MaterialKind, number>> = {
+  low: { glass: 1, wood: 3, brick: 3, stone: 2, metal: 1 },
+  tall: { glass: 3, wood: 0, brick: 1, stone: 2, metal: 2 },
+};
+
+/** Weighted pick using a single draw, so the rest of the generation sequence is unchanged. */
+function pickMaterial(rng: Rng, weights: Record<MaterialKind, number>): MaterialKind {
+  const entries = Object.entries(weights) as [MaterialKind, number][];
+  let t = rng.next() * entries.reduce((sum, [, w]) => sum + w, 0);
+  for (const [m, w] of entries) {
+    t -= w;
+    if (t < 0) return m;
+  }
+  return entries[entries.length - 1][0];
+}
 
 type Rect = { x0: number; z0: number; x1: number; z1: number }; // half-open [x0, x1)
 
@@ -177,7 +195,7 @@ function tryGenerate(seed: number, rng: Rng, opts: LevelOptions): Level | null {
     const tall = rng.chance(0.2);
     const height = Math.min(sizeY - 8, tall ? rng.int(18, 30) : rng.int(4, 14));
     const id = buildings.length;
-    buildings.push({ id, color: rng.pick(BUILDING_COLORS) });
+    buildings.push({ id, material: pickMaterial(rng, MATERIAL_WEIGHTS[tall ? 'tall' : 'low']) });
     for (let x = r.x0; x < r.x1; x++)
       for (let z = r.z0; z < r.z1; z++) for (let y = 0; y < height; y++) grid.set(x, y, z, id + 1);
   }

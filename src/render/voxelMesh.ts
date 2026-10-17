@@ -1,10 +1,12 @@
-// Renders the building grid as one InstancedMesh (ADR-003).
-// Only cells with at least one empty neighbour are drawn; the mesh is
+// Renders the building grid as one InstancedMesh per material (ADR-003, ADR-019).
+// Only cells with at least one empty neighbour are drawn; the meshes are
 // rebuilt whenever the grid's version changes (DES-2: destruction persists).
 
 import * as THREE from 'three';
 import type { Building } from '../world/levelGen';
+import { MATERIALS, type MaterialKind, type MaterialOf, materialLookup } from '../world/materials';
 import type { VoxelGrid } from '../world/voxelGrid';
+import { createMaterialMeshMaterials } from './materialTextures';
 
 const NEIGHBOURS = [
   [1, 0, 0],
@@ -16,25 +18,35 @@ const NEIGHBOURS = [
 ] as const;
 
 export class VoxelMesh {
-  readonly mesh: THREE.InstancedMesh;
+  readonly group = new THREE.Group();
+  private readonly meshes = {} as Record<MaterialKind, THREE.InstancedMesh>;
+  private readonly materialOf: MaterialOf;
   private builtVersion = -1;
-  private readonly colors: THREE.Color[];
 
   constructor(
     private readonly grid: VoxelGrid,
     buildings: Building[],
   ) {
-    this.colors = buildings.map((b) => new THREE.Color(b.color));
-    const capacity = Math.max(1, grid.countSolid());
-    this.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial(), capacity);
-    this.mesh.castShadow = true;
-    this.mesh.receiveShadow = true;
-    this.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
-    this.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(capacity * 3), 3);
+    this.materialOf = materialLookup(buildings);
+    // A material can never show more cells than it has solid ones.
+    const capacity = Object.fromEntries(MATERIALS.map((m) => [m, 0])) as Record<MaterialKind, number>;
+    for (const c of grid.cells) if (c !== 0) capacity[this.materialOf(c)]++;
+    const materials = createMaterialMeshMaterials();
+    const box = new THREE.BoxGeometry(1, 1, 1);
+    for (const kind of MATERIALS) {
+      const cap = Math.max(1, capacity[kind]);
+      const mesh = new THREE.InstancedMesh(box, materials[kind], cap);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3);
+      this.meshes[kind] = mesh;
+      this.group.add(mesh);
+    }
     this.update();
   }
 
-  /** Cheap integer hash for per-cell colour variation. */
+  /** Cheap integer hash for per-cell shade variation. */
   private static hash(x: number, y: number, z: number): number {
     let h = (x * 374761393 + y * 668265263 + z * 2147483647) | 0;
     h = Math.imul(h ^ (h >>> 13), 1274126177);
@@ -47,8 +59,7 @@ export class VoxelMesh {
     const { grid } = this;
     const m = new THREE.Matrix4();
     const c = new THREE.Color();
-    const window = new THREE.Color(0x4a6680);
-    let n = 0;
+    const count = Object.fromEntries(MATERIALS.map((k) => [k, 0])) as Record<MaterialKind, number>;
     for (let y = 0; y < grid.sizeY; y++)
       for (let z = 0; z < grid.sizeZ; z++)
         for (let x = 0; x < grid.sizeX; x++) {
@@ -63,18 +74,21 @@ export class VoxelMesh {
             }
           }
           if (!exposed) continue;
+          const kind = this.materialOf(id);
+          const mesh = this.meshes[kind];
+          const n = count[kind]++;
           m.makeTranslation(x + 0.5, y + 0.5, z + 0.5);
-          this.mesh.setMatrixAt(n, m);
-          c.copy(this.colors[id - 1]);
-          // Rough "window" pattern plus per-cell shade jitter (VIS-1).
-          if (y % 2 === 1 && (x + z) % 2 === 0) c.lerp(window, 0.45);
-          c.offsetHSL(0, 0, (VoxelMesh.hash(x, y, z) - 0.5) * 0.06);
-          this.mesh.setColorAt(n, c);
-          n++;
+          mesh.setMatrixAt(n, m);
+          // The texture carries the colour; tint only shades buildings and cells apart (VIS-1).
+          const shade = 1 + (VoxelMesh.hash(id, 0, 0) - 0.5) * 0.12 + (VoxelMesh.hash(x, y, z) - 0.5) * 0.06;
+          mesh.setColorAt(n, c.setScalar(shade));
         }
-    this.mesh.count = n;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.mesh.instanceColor!.needsUpdate = true;
-    this.mesh.computeBoundingSphere();
+    for (const kind of MATERIALS) {
+      const mesh = this.meshes[kind];
+      mesh.count = count[kind];
+      mesh.instanceMatrix.needsUpdate = true;
+      mesh.instanceColor!.needsUpdate = true;
+      mesh.computeBoundingSphere();
+    }
   }
 }

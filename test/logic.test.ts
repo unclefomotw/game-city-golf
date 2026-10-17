@@ -3,9 +3,10 @@ import { describe, expect, it } from 'vitest';
 import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
+import { MATERIAL_SCORE, scoreForDestruction } from '../src/game/scoring';
 import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
-import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
+import { launch, previewPath, type ShotInput, type SimEvent, step, type World } from '../src/physics/ballSim';
 import { CameraRig, orbitBallScreenY } from '../src/render/cameraRig';
 import {
   COVERAGE,
@@ -16,6 +17,7 @@ import {
   TEE,
   TEE_CLEARANCE,
 } from '../src/world/levelGen';
+import { MATERIALS, type MaterialKind, materialLookup } from '../src/world/materials';
 import { findTestScene, TEST_SCENES } from '../src/world/testScenes';
 import { PreviewOverlay, VoxelGrid } from '../src/world/voxelGrid';
 
@@ -52,6 +54,7 @@ describe('level generation', () => {
     const a = generateLevel(1234);
     const b = generateLevel(1234);
     expect(Array.from(a.grid.cells)).toEqual(Array.from(b.grid.cells));
+    expect(a.buildings).toEqual(b.buildings);
     expect(a.goal).toEqual(b.goal);
     expect(a.start).toEqual(b.start);
   });
@@ -237,7 +240,7 @@ describe('destruction', () => {
     const before = grid.countSolid();
     const start = new Vector3(100, 2, 185);
     const shot = flat({ elevation: 0.05, power: 1 });
-    const preview = previewPath(start, shot, new PreviewOverlay(grid), config, 1);
+    const preview = previewPath(start, shot, { solids: new PreviewOverlay(grid) }, config, 1);
     expect(grid.countSolid()).toBe(before);
     const s = launch(start, shot, config);
     for (let i = 1; i < preview.length; i++) {
@@ -248,7 +251,13 @@ describe('destruction', () => {
 
   it('SHOT-5: preview ends at the first building impact', () => {
     const start = new Vector3(100, 2, 185);
-    const preview = previewPath(start, flat({ elevation: 0.05, power: 1 }), new PreviewOverlay(wallGrid()), config, 1);
+    const preview = previewPath(
+      start,
+      flat({ elevation: 0.05, power: 1 }),
+      { solids: new PreviewOverlay(wallGrid()) },
+      config,
+      1,
+    );
     // The wall face is at z = 172; nothing past or rebounding from it is shown.
     for (const p of preview) expect(p.z).toBeGreaterThan(172);
     expect(preview.at(-1)!.z).toBeLessThan(174);
@@ -257,7 +266,13 @@ describe('destruction', () => {
   it('SHOT-5: preview ends at the first ground bounce', () => {
     const grid = new VoxelGrid(200, 60, 200);
     const start = new Vector3(100, 0.3, 190);
-    const preview = previewPath(start, flat({ elevation: 0.6, power: 0.2 }), new PreviewOverlay(grid), config, 3);
+    const preview = previewPath(
+      start,
+      flat({ elevation: 0.6, power: 0.2 }),
+      { solids: new PreviewOverlay(grid) },
+      config,
+      3,
+    );
     // Up, then down, and stop: the height never rises again after descending.
     let descending = false;
     for (let i = 1; i < preview.length; i++) {
@@ -267,6 +282,104 @@ describe('destruction', () => {
     }
     expect(descending).toBe(true);
     expect(preview.at(-1)!.y).toBeLessThan(1);
+  });
+});
+
+describe('materials (DES-8, ADR-019)', () => {
+  /**
+   * Walls 2 cells thick across the ball's path at z = 170..172, one building per layer.
+   * `layers` lists materials front (z = 171) to back; a single entry fills both layers.
+   */
+  function materialWall(...layers: MaterialKind[]) {
+    const grid = new VoxelGrid(200, 60, 200);
+    const front = layers[0];
+    const back = layers[1] ?? front;
+    const buildings = [
+      { id: 0, material: front },
+      { id: 1, material: back },
+    ];
+    for (let x = 80; x < 120; x++)
+      for (let y = 0; y < 20; y++) {
+        grid.set(x, y, 171, 1);
+        grid.set(x, y, 170, 2);
+      }
+    const world: World = { solids: grid, materialOf: materialLookup(buildings) };
+    return { grid, world };
+  }
+
+  function hit(world: World, power: number, start = new Vector3(100, 2, 185)) {
+    const s = launch(start, flat({ elevation: 0.05, power }), config);
+    const events: SimEvent[] = [];
+    while (!s.stopped) step(s, world, config, events);
+    return { end: s.pos, events };
+  }
+
+  const destroyed = (events: SimEvent[]) =>
+    events.flatMap((e) => (e.type === 'destroy' ? e.cells : [])).map((c) => c.material);
+
+  it('DES-8: a medium hit shatters glass but leaves metal untouched', () => {
+    const glass = materialWall('glass');
+    const metal = materialWall('metal');
+    const glassBefore = glass.grid.countSolid();
+    const metalBefore = metal.grid.countSolid();
+    hit(glass.world, 0.4);
+    const metalShot = hit(metal.world, 0.4);
+    expect(glass.grid.countSolid()).toBeLessThan(glassBefore);
+    expect(metal.grid.countSolid()).toBe(metalBefore);
+    expect(metalShot.end.z).toBeGreaterThan(172);
+  });
+
+  it('DES-8: metal is hard but not unbreakable', () => {
+    const { grid, world } = materialWall('metal');
+    const before = grid.countSolid();
+    const { events } = hit(world, 1);
+    expect(grid.countSolid()).toBeLessThan(before);
+    expect(destroyed(events).every((m) => m === 'metal')).toBe(true);
+  });
+
+  it('DES-8: harder materials lose fewer cells to the same full-power hit', () => {
+    const lost = MATERIALS.map((m) => {
+      const { grid, world } = materialWall(m);
+      const before = grid.countSolid();
+      hit(world, 1);
+      return before - grid.countSolid();
+    });
+    for (let i = 1; i < lost.length; i++) expect(lost[i]).toBeLessThan(lost[i - 1]);
+  });
+
+  it('DES-8: one hit can smash a glass front and stop at the metal behind it', () => {
+    const { world } = materialWall('glass', 'metal');
+    const { end, events } = hit(world, 0.45);
+    const mats = destroyed(events);
+    expect(mats).toContain('glass');
+    expect(mats).not.toContain('metal');
+    expect(end.z).toBeGreaterThan(170);
+  });
+
+  it('DES-8: a slow ball rebounds faster off metal than off stone', () => {
+    const rebound = (m: MaterialKind) => {
+      const { world } = materialWall(m);
+      const s = launch(new Vector3(100, 2, 175), flat({ elevation: 0, power: 0.18 }), config);
+      while (s.vel.z < 0) step(s, world, config);
+      return s.vel.z;
+    };
+    expect(rebound('metal')).toBeGreaterThan(rebound('stone'));
+  });
+
+  it('DES-7: destruction score weighs cells by material', () => {
+    expect(MATERIALS.map((m) => MATERIAL_SCORE[m])).toEqual([1, 2, 3, 5, 8]);
+    const cells = MATERIALS.map((material, i) => ({ x: i, y: 0, z: 0, id: 1, material }));
+    expect(scoreForDestruction({ type: 'destroy', cells, impact: new Vector3(), speed: 10 })).toBe(19);
+  });
+
+  it('VIS-3: every building gets a material and all five appear across maps', () => {
+    const seen = new Set<MaterialKind>();
+    for (let seed = 0; seed < 10; seed++)
+      for (const b of generateLevel(seed).buildings) {
+        expect(MATERIALS).toContain(b.material);
+        seen.add(b.material);
+      }
+    expect(seen.size).toBe(MATERIALS.length);
   });
 });
 

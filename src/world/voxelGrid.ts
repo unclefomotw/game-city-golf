@@ -2,9 +2,11 @@
 // Cell (x, y, z) spans [x, x+1) x [y, y+1) x [z, z+1) in world units.
 // The ground is the plane y = 0 and is not part of the grid.
 
+import type { MaterialKind } from './materials';
+
 export type CellCoord = { x: number; y: number; z: number };
-/** A removed cell and the building it belonged to (id + 1, as stored in the grid). */
-export type RemovedCell = CellCoord & { id: number };
+/** A removed cell, the building it belonged to (id + 1, as stored in the grid) and its material. */
+export type RemovedCell = CellCoord & { id: number; material: MaterialKind };
 
 /** Read-only view of which cells are solid. Physics only depends on this. */
 export interface SolidQuery {
@@ -12,6 +14,8 @@ export interface SolidQuery {
   readonly sizeY: number;
   readonly sizeZ: number;
   isSolid(x: number, y: number, z: number): boolean;
+  /** Cell value: 0 = empty, otherwise building id + 1. */
+  get(x: number, y: number, z: number): number;
   /** Removes a cell; returns its previous value, or 0 if it was already empty. */
   remove(x: number, y: number, z: number): number;
 }
@@ -88,6 +92,10 @@ export class PreviewOverlay implements SolidQuery {
 
   isSolid(x: number, y: number, z: number): boolean {
     return this.base.isSolid(x, y, z) && !this.removed.has(this.base.index(x, y, z));
+  }
+
+  get(x: number, y: number, z: number): number {
+    return this.isSolid(x, y, z) ? this.base.get(x, y, z) : 0;
   }
 
   remove(x: number, y: number, z: number): number {

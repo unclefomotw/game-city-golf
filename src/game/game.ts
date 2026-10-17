@@ -2,8 +2,9 @@
 
 import { Vector3 } from 'three';
 import type { Config } from '../config';
-import { type BallState, launch, type ShotInput, type SimEvent, step } from '../physics/ballSim';
+import { type BallState, launch, type ShotInput, type SimEvent, step, type World } from '../physics/ballSim';
 import type { Level } from '../world/levelGen';
+import { materialLookup } from '../world/materials';
 import { scoreForDestruction } from './scoring';
 
 export type Phase = 'aiming' | 'flying' | 'finished';
@@ -16,11 +17,13 @@ export class Game {
   /** Where the current/last stroke was played from (PLAY-5). */
   private lastShotPos: Vector3;
   private accumulator = 0;
+  private readonly world: World;
 
   constructor(
     readonly level: Level,
     private readonly cfg: Config,
   ) {
+    this.world = { solids: level.grid, materialOf: materialLookup(level.buildings) };
     const s = level.start;
     this.lastShotPos = new Vector3(s.x, s.y, s.z);
     this.ball = this.restingBall(this.lastShotPos);
@@ -54,7 +57,7 @@ export class Game {
     const dt = this.cfg.physics.dt;
     this.accumulator += Math.min(elapsed, 0.1);
     while (this.accumulator >= dt && !this.ball.stopped) {
-      step(this.ball, { solids: this.level.grid }, this.cfg, events);
+      step(this.ball, this.world, this.cfg, events);
       this.accumulator -= dt;
     }
     for (const e of events) if (e.type === 'destroy') this.destructionScore += scoreForDestruction(e);

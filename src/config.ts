@@ -1,6 +1,8 @@
 // Every tunable "feel" parameter lives here (AGENTS.md rule 8, ADR-006).
 // The ?debug tuning panel edits this object live.
 
+import type { MaterialKind } from './world/materials';
+
 export const config = {
   physics: {
     /** Fixed simulation timestep in seconds (PLAY-3: deterministic). */
@@ -17,10 +19,10 @@ export const config = {
     ballRadius: 0.3,
     /** Launch speed at full power. */
     maxLaunchSpeed: 42,
-    /** Restitution (bounciness) per surface. */
-    restitution: { ground: 0.45, building: 0.35, boundary: 0.6 },
+    /** Restitution (bounciness) per non-building surface; buildings use `materials`. */
+    restitution: { ground: 0.45, boundary: 0.6 },
     /** Fraction of tangential speed kept on each bounce. */
-    bounceFriction: { ground: 0.82, building: 0.7, boundary: 0.85 },
+    bounceFriction: { ground: 0.82, boundary: 0.85 },
     /** How strongly spin converts into tangential speed on contact. */
     contactSpinK: 2,
     /** Fraction of spin kept after a contact. */
@@ -36,13 +38,23 @@ export const config = {
     maxShotTime: 30,
   },
   destruction: {
-    /** Impact speed below which buildings are not damaged. */
-    minSpeed: 5,
-    /** Dig radius (in cells) per unit of impact speed. */
+    /** Dig radius (in cells) per unit of impact speed, capped at maxRadius, then times the material's radiusScale. */
     radiusPerSpeed: 0.075,
     maxRadius: 3.2,
-    /** Speed kept per destroyed cell when the ball punches through. */
-    speedKeptPerCell: 0.985,
+  },
+  /**
+   * DES-8: bounciness and fragility per building material (ADR-019).
+   * - restitution / bounceFriction: as in physics, for bounces off this material.
+   * - minSpeed: impact speed below which this material is not damaged.
+   * - radiusScale: multiplies the dig radius (after the maxRadius cap) for cells of this material.
+   * - speedKeptPerCell: speed kept per destroyed cell of this material when punching through.
+   */
+  materials: {
+    glass: { restitution: 0.15, bounceFriction: 0.75, minSpeed: 2, radiusScale: 1.6, speedKeptPerCell: 0.998 },
+    wood: { restitution: 0.2, bounceFriction: 0.6, minSpeed: 3, radiusScale: 1.25, speedKeptPerCell: 0.99 },
+    brick: { restitution: 0.35, bounceFriction: 0.7, minSpeed: 5, radiusScale: 1, speedKeptPerCell: 0.985 },
+    stone: { restitution: 0.5, bounceFriction: 0.75, minSpeed: 12, radiusScale: 0.75, speedKeptPerCell: 0.97 },
+    metal: { restitution: 0.7, bounceFriction: 0.85, minSpeed: 25, radiusScale: 0.5, speedKeptPerCell: 0.95 },
   },
   preview: {
     /** SHOT-5: only a short stretch of the trajectory is previewed. */
@@ -91,4 +103,5 @@ export const config = {
 };
 
 export type Config = typeof config;
-export type SurfaceKind = keyof Config['physics']['restitution'];
+/** Ground and field boundary, or the material of the building that was hit. */
+export type SurfaceKind = keyof Config['physics']['restitution'] | MaterialKind;

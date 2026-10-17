@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { config } from './config';
 import { parseSeed, randomSeed } from './core/rng';
 import { Game, type Phase } from './game/game';
+import { scoreForDestruction } from './game/scoring';
 import { stepAim } from './input/aimStick';
 import { type InputKind, trackInputKind } from './input/inputKind';
 import { ViewInput } from './input/viewInput';
@@ -15,6 +16,7 @@ import { SceneView } from './render/sceneView';
 import { VoxelMesh } from './render/voxelMesh';
 import { HoldButton, Joystick, SpinPad } from './ui/widgets';
 import { DEFAULT_LEVEL_OPTIONS, generateLevel } from './world/levelGen';
+import { materialLookup } from './world/materials';
 import { findTestScene, TEST_SCENES } from './world/testScenes';
 import { PreviewOverlay } from './world/voxelGrid';
 
@@ -34,6 +36,9 @@ if (seed === null && !testScene) {
 }
 const level = testScene ? testScene.build(levelOptions) : generateLevel(seed ?? 0, levelOptions);
 const game = new Game(level, config);
+const materialOf = materialLookup(level.buildings);
+/** SHOT-5: the preview digs into a scratch overlay so the real grid stays untouched. */
+const previewWorld = () => ({ solids: new PreviewOverlay(level.grid), materialOf });
 
 // --- Scene ---------------------------------------------------------------------
 const viewEl = $('view');
@@ -42,7 +47,7 @@ const view = new SceneView(canvas, level, config);
 const voxels = new VoxelMesh(level.grid, level.buildings);
 const debris = new Debris(config);
 const aimVisuals = new AimVisuals();
-view.scene.add(voxels.mesh, debris.mesh, aimVisuals.group);
+view.scene.add(voxels.group, debris.mesh, aimVisuals.group);
 const { sizeX, sizeY, sizeZ } = level.grid;
 const rig = new CameraRig(view.camera, config, new THREE.Vector3(sizeX, sizeY, sizeZ), (p) =>
   level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)),
@@ -188,9 +193,9 @@ function frame(now: number): void {
 
   for (const e of game.update(dt)) {
     if (e.type !== 'destroy') continue;
-    debris.spawn(e.cells, e.impact, e.speed, level.buildings);
+    debris.spawn(e.cells, e.impact, e.speed);
     rig.shake(Math.min(1, e.cells.length / 25));
-    toast(`破壞 +${e.cells.length}`);
+    toast(`破壞 +${scoreForDestruction(e)}`);
   }
   if (game.phase === 'finished' && lastPhase !== 'finished') {
     $('win-text').textContent = `${game.strokes} 桿 · 破壞分數 ${game.destructionScore}`;
@@ -229,7 +234,7 @@ function frame(now: number): void {
   const aiming = game.phase === 'aiming';
   aimVisuals.visible = aiming;
   if (aiming) {
-    const preview = previewPath(game.ball.pos, shot, new PreviewOverlay(level.grid), config, config.preview.seconds);
+    const preview = previewPath(game.ball.pos, shot, previewWorld(), config, config.preview.seconds);
     aimVisuals.update(game.ball.pos, shot, preview, view.camera.position, config.preview);
   }
 

@@ -130,7 +130,9 @@ function syncPanel(phase: Phase): void {
   const free = rig.mode === 'free';
   $('aim-controls').hidden = free;
   $('free-controls').hidden = !free;
-  $<HTMLButtonElement>('fire').disabled = free || phase !== 'aiming';
+  // Firing is impossible in free mode, so hide the button there to save panel space.
+  $('fire').hidden = free;
+  $<HTMLButtonElement>('fire').disabled = phase !== 'aiming';
   $<HTMLButtonElement>('penalty').disabled = phase === 'finished' || game.strokes === 0;
   $('ghost').textContent = free ? '回到球' : '靈魂出竅';
   $('strokes').textContent = String(game.strokes);

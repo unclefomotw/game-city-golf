@@ -1,9 +1,10 @@
-import { Vector3 } from 'three';
+import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
 import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
+import { CameraRig } from '../src/render/cameraRig';
 import { DEFAULT_LEVEL_OPTIONS, generateLevel, isSolvable } from '../src/world/levelGen';
 import { findTestScene, TEST_SCENES } from '../src/world/testScenes';
 import { PreviewOverlay, VoxelGrid } from '../src/world/voxelGrid';
@@ -204,5 +205,35 @@ describe('game flow', () => {
     game.ball.pos.set(level.goal.x, 3, level.goal.z);
     for (let i = 0; i < 600 && game.phase === 'flying'; i++) game.update(1 / 60);
     expect(game.phase).toBe('finished');
+  });
+});
+
+describe('free camera (CAM-1, ADR-011)', () => {
+  const still = { forward: 0, right: 0, up: 0, fast: false };
+  function freeRig(lookDownPx: number) {
+    const cam = new PerspectiveCamera();
+    cam.position.set(50, 20, 50);
+    cam.lookAt(50, 20, 0);
+    const rig = new CameraRig(cam, config, new Vector3(100, 40, 100), () => false);
+    rig.enterFree();
+    rig.rotate(0, lookDownPx);
+    rig.update(0, new Vector3(), still);
+    return { cam, rig };
+  }
+
+  it('moving forward follows the view pitch', () => {
+    const { cam, rig } = freeRig(300);
+    rig.update(0.5, new Vector3(), { ...still, forward: 1 });
+    expect(cam.position.y).toBeLessThan(20);
+    expect(cam.position.z).toBeLessThan(50);
+  });
+
+  it('strafing and up/down keep the other axes', () => {
+    const { cam, rig } = freeRig(300);
+    rig.update(0.5, new Vector3(), { ...still, right: 1 });
+    expect(cam.position.y).toBeCloseTo(20);
+    rig.update(0.5, new Vector3(), { ...still, up: 1 });
+    expect(cam.position.y).toBeGreaterThan(20);
+    expect(cam.position.z).toBeCloseTo(50);
   });
 });

@@ -45,6 +45,7 @@ export function createTuningPanel(cfg: Config): void {
   const c = gui.addFolder('相機');
   c.add(cfg.camera, 'freeSpeed', 2, 60, 1);
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);
+  c.add(cfg.camera, 'levelBallScreenOffset', 0, 0.9, 0.01).name('平視時球的下移量');
   c.close();
 
   gui

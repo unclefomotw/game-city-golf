@@ -6,7 +6,7 @@ import { Game } from '../src/game/game';
 import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
-import { CameraRig } from '../src/render/cameraRig';
+import { CameraRig, orbitBallScreenY } from '../src/render/cameraRig';
 import {
   COVERAGE,
   DEFAULT_LEVEL_OPTIONS,
@@ -299,6 +299,36 @@ describe('free camera (CAM-1, ADR-011)', () => {
     rig.update(0.5, new Vector3(), { ...still, up: 1 });
     expect(cam.position.y).toBeGreaterThan(20);
     expect(cam.position.z).toBeCloseTo(50);
+  });
+});
+
+describe('orbit camera framing (ADR-017)', () => {
+  const still = { forward: 0, right: 0, up: 0, fast: false };
+  function ballScreenY(pitchPx: number) {
+    const cam = new PerspectiveCamera(config.camera.fov, 1, 0.1, 400);
+    const rig = new CameraRig(cam, config, new Vector3(100, 40, 100), () => false);
+    const ball = new Vector3(50, 0.3, 50);
+    rig.lookAlong(ball, 0);
+    rig.rotate(0, pitchPx);
+    // Large dt so the smoothed target and pitch settle.
+    for (let i = 0; i < 5; i++) rig.update(10, ball, still);
+    cam.updateMatrixWorld();
+    return ball.clone().project(cam).y;
+  }
+
+  it('puts the ball below center when looking level', () => {
+    expect(ballScreenY(-70)).toBeCloseTo(-config.camera.levelBallScreenOffset, 2);
+  });
+
+  it('centers the ball when looking straight down', () => {
+    expect(Math.abs(ballScreenY(1000))).toBeLessThan(0.05);
+  });
+
+  it('moves the ball toward center as the camera tilts down', () => {
+    const level = config.camera.levelBallScreenOffset;
+    expect(orbitBallScreenY(-0.2, level)).toBeCloseTo(-level);
+    expect(orbitBallScreenY(0.3, level)).toBeLessThan(orbitBallScreenY(0.8, level));
+    expect(orbitBallScreenY(Math.PI / 2, level)).toBeCloseTo(0);
   });
 });
 

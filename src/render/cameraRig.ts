@@ -10,6 +10,15 @@ export type CameraMode = 'orbit' | 'free';
 /** Movement intent in camera space, each axis -1..1. */
 export type MoveInput = { forward: number; right: number; up: number; fast: boolean };
 
+/**
+ * Where the ball sits vertically on screen in orbit mode, in NDC (-1 bottom, 0 center).
+ * `levelOffset` applies when the camera looks level; it fades to 0 (center) as the
+ * camera tilts down to top-down, so a level view isn't half ground (ADR-017).
+ */
+export function orbitBallScreenY(pitch: number, levelOffset: number): number {
+  return -levelOffset * Math.cos(THREE.MathUtils.clamp(pitch, 0, Math.PI / 2));
+}
+
 export class CameraRig {
   mode: CameraMode = 'orbit';
   private readonly target = new THREE.Vector3();
@@ -119,6 +128,9 @@ export class CameraRig {
       cam.position.copy(this.target).addScaledVector(this.orbitDir(this.viewPitch), dist);
       cam.position.y = Math.max(0.4, cam.position.y);
       cam.lookAt(this.target);
+      // Tilt the view up so the ball lands at orbitBallScreenY (ADR-017).
+      const ndcY = orbitBallScreenY(this.viewPitch, this.cfg.camera.levelBallScreenOffset);
+      cam.rotateX(Math.atan(-ndcY * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)));
     } else {
       const c = this.cfg.camera;
       const speed = c.freeSpeed * (move.fast ? c.freeFastMultiplier : 1) * dt;

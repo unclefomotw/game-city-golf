@@ -56,6 +56,11 @@ export const config = {
     freeSpeed: 14,
     freeFastMultiplier: 2.5,
     lookSensitivity: 0.005,
+    /**
+     * Orbit mode: how far below center the ball sits when the camera looks level,
+     * as a fraction of the half view height. Fades to center at top-down (ADR-017).
+     */
+    levelBallScreenOffset: 0.45,
   },
   debris: {
     maxParticles: 700,

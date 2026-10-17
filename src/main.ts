@@ -1,6 +1,8 @@
 // Entry point: wires the pure game logic to rendering, input and the panel.
 
 import * as THREE from 'three';
+import { cueGain, SoundDirector, type SoundEvent } from './audio/soundCues';
+import { SoundPlayer } from './audio/soundPlayer';
 import { config } from './config';
 import { parseSeed, randomSeed } from './core/rng';
 import { Game, type Phase } from './game/game';
@@ -53,6 +55,15 @@ const rig = new CameraRig(view.camera, config, new THREE.Vector3(sizeX, sizeY, s
   level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)),
 );
 
+// --- Sound (AUD-1 ~ AUD-9, ADR-021) -----------------------------------------------
+const sound = new SoundPlayer(config);
+const soundDirector = new SoundDirector(config);
+/** Sounds triggered by the panel (the shot), played on the next frame with the physics events. */
+const pendingSounds: SoundEvent[] = [];
+// Browsers only allow audio after a user gesture; any input unlocks it (and resumes it after interruptions).
+for (const type of ['pointerdown', 'pointerup', 'keydown', 'touchend'])
+  window.addEventListener(type, () => sound.unlock(), { capture: true, passive: true });
+
 // --- Shot settings (PLAY-2) ------------------------------------------------------
 const toGoal = Math.atan2(level.goal.x - level.start.x, -(level.goal.z - level.start.z));
 const shot: ShotInput = {
@@ -85,6 +96,7 @@ $('spin-reset').addEventListener('click', () => spinPad.reset());
 $('fire').addEventListener('click', () => {
   if (game.phase !== 'aiming' || rig.mode !== 'orbit' || shot.power < 0.01) return;
   game.fire({ ...shot });
+  pendingSounds.push({ type: 'shot', power: shot.power });
 });
 $('penalty').addEventListener('click', () => {
   game.penalty();
@@ -102,6 +114,7 @@ const newMap = () => {
 $('new-map').addEventListener('click', newMap);
 $('win-new').addEventListener('click', newMap);
 $('replay').addEventListener('click', () => location.reload());
+$('mute').addEventListener('click', () => sound.setMuted(!sound.muted));
 $('seed').textContent = testScene ? testScene.label : String(seed);
 if (import.meta.env.DEV) addScenePicker();
 
@@ -152,6 +165,8 @@ function syncPanel(phase: Phase): void {
   $<HTMLButtonElement>('fire').disabled = phase !== 'aiming';
   $<HTMLButtonElement>('penalty').disabled = phase === 'finished' || game.strokes === 0;
   $('ghost').textContent = free ? '回到球' : '靈魂出竅';
+  $('mute').classList.toggle('muted', sound.muted);
+  $('mute').title = sound.muted ? '開啟音效' : '靜音';
   $('strokes').textContent = String(game.strokes);
   $('score').textContent = String(game.destructionScore);
   if (document.activeElement !== powerInput) powerInput.value = String(Math.round(shot.power * 100));
@@ -191,7 +206,9 @@ function frame(now: number): void {
   const dt = Math.min((now - last) / 1000, 0.1);
   last = now;
 
-  for (const e of game.update(dt)) {
+  const simEvents = game.update(dt);
+  const soundEvents: SoundEvent[] = [...pendingSounds.splice(0), ...simEvents];
+  for (const e of simEvents) {
     if (e.type !== 'destroy') continue;
     debris.spawn(e.cells, e.impact, e.speed, level.buildings);
     rig.shake(Math.min(1, e.cells.length / 25));
@@ -200,6 +217,7 @@ function frame(now: number): void {
   if (game.phase === 'finished' && lastPhase !== 'finished') {
     $('win-text').textContent = `${game.strokes} 桿 · 破壞分數 ${game.destructionScore}`;
     $('win').hidden = false;
+    soundEvents.push({ type: 'goal' });
   }
   lastPhase = game.phase;
 
@@ -226,6 +244,11 @@ function frame(now: number): void {
     up: THREE.MathUtils.clamp(km.up + (flyUp.held ? 1 : 0) - (flyDown.held ? 1 : 0), -1, 1),
     fast: km.fast,
   });
+
+  // AUD-4: volume follows how far the camera is from the ball, where every sound happens.
+  const listenDistance = view.camera.position.distanceTo(game.ball.pos);
+  for (const cue of soundDirector.cues(soundEvents, now / 1000))
+    sound.play(cue, cueGain(cue, listenDistance, config.audio));
 
   voxels.update();
   debris.update(dt);

@@ -84,6 +84,28 @@ export const config = {
     gravity: 22,
     speed: 9,
   },
+  audio: {
+    // AUD-1 ~ AUD-8, ADR-021. Sound shapes live in audio/recipes.ts; these are the mix and the anti-noise rules.
+    masterVolume: 0.8,
+    /** Per-sound volume, 0..1. */
+    volume: { shot: 0.7, ground: 0.6, boundary: 0.6, impact: 0.8, destroy: 1, goal: 0.7 },
+    /** AUD-8: bounces slower than this make no sound. */
+    minImpactSpeed: 2.5,
+    /** AUD-3: impact speed that sounds at full strength. */
+    fullImpactSpeed: 30,
+    /** Loudness of the faintest audible hit, as a fraction of full strength. */
+    minLoudness: 0.15,
+    /** AUD-3: cells smashed in one frame that count as a full-sized destruction. */
+    fullDestroyCells: 40,
+    /** AUD-8: seconds before the same sound may play again. */
+    cooldown: 0.08,
+    /** AUD-8: most cues sounding at once; extra ones are dropped. */
+    maxVoices: 10,
+    /** AUD-4: full volume while the camera is this close to the ball. */
+    refDistance: 14,
+    /** AUD-4: how fast the volume falls beyond refDistance (1 = halves at twice the distance). */
+    rolloff: 1,
+  },
   aim: {
     // ADR-013: the direction joystick rate-controls the angles (SHOT-1).
     /** Horizontal turn rate at full stick deflection, deg/s. */

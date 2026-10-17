@@ -56,6 +56,21 @@ export function createTuningPanel(cfg: Config): void {
   a.add(cfg.aim, 'keyboardDeflection', 0.1, 1, 0.05).name('方向鍵力度');
   a.close();
 
+  // AUD-1 ~ AUD-8, ADR-021
+  const au = gui.addFolder('音效');
+  au.add(cfg.audio, 'masterVolume', 0, 1, 0.05).name('總音量');
+  for (const k of Object.keys(cfg.audio.volume) as (keyof Config['audio']['volume'])[])
+    au.add(cfg.audio.volume, k, 0, 1, 0.05).name(`音量 ${k}`);
+  au.add(cfg.audio, 'minImpactSpeed', 0, 10, 0.1).name('出聲最低撞擊速度');
+  au.add(cfg.audio, 'fullImpactSpeed', 5, 60, 1).name('最大聲撞擊速度');
+  au.add(cfg.audio, 'minLoudness', 0, 1, 0.05).name('最小聲比例');
+  au.add(cfg.audio, 'fullDestroyCells', 1, 200, 1).name('最大份量破壞格數');
+  au.add(cfg.audio, 'cooldown', 0, 0.5, 0.01).name('同音效間隔秒');
+  au.add(cfg.audio, 'maxVoices', 1, 32, 1).name('同時發聲上限');
+  au.add(cfg.audio, 'refDistance', 1, 80, 1).name('全音量距離');
+  au.add(cfg.audio, 'rolloff', 0, 5, 0.1).name('距離衰減');
+  au.close();
+
   const c = gui.addFolder('相機');
   c.add(cfg.camera, 'freeSpeed', 2, 60, 1);
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);

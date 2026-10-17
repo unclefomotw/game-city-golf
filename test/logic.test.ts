@@ -1,6 +1,8 @@
 import { PerspectiveCamera, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { config } from '../src/config';
+import { layersDuration, recipe } from '../src/audio/recipes';
+import { cueGain, distanceGain, type SoundCue, SoundDirector, type SoundEvent } from '../src/audio/soundCues';
+import { config, type SurfaceKind } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
 import { MATERIAL_SCORE, scoreForDestruction } from '../src/game/scoring';
@@ -543,5 +545,97 @@ describe('direction joystick (SHOT-1, ADR-013)', () => {
     stepAim(a, { right: 0, up: -1 }, 10, cfg);
     expect(a.elevation / DEG).toBeCloseTo(-45);
     expect(clampElevation(0.2, cfg)).toBe(0.2);
+  });
+});
+
+describe('sound cues (AUD-1 ~ AUD-4, AUD-8, ADR-021)', () => {
+  const a = config.audio;
+  const cell = (material: MaterialKind) => ({ x: 0, y: 0, z: 0, id: 1, material });
+  const destroy = (material: MaterialKind, cells: number, speed = 20): SoundEvent => ({
+    type: 'destroy',
+    cells: Array.from({ length: cells }, () => cell(material)),
+    impact: new Vector3(),
+    speed,
+  });
+  const bounce = (surface: SurfaceKind, speed = 10): SoundEvent => ({ type: 'bounce', surface, speed });
+
+  it('AUD-1: every listed event makes a cue of its own kind', () => {
+    const d = new SoundDirector(config);
+    const cues = d.cues(
+      [{ type: 'shot', power: 0.5 }, bounce('ground'), bounce('boundary'), bounce('glass'), { type: 'goal' }],
+      0,
+    );
+    expect(cues.map((c) => c.kind).sort()).toEqual(['boundary', 'goal', 'ground', 'impact', 'shot']);
+    expect(new SoundDirector(config).cues([destroy('wood', 3)], 0)).toMatchObject([
+      { kind: 'destroy', material: 'wood' },
+    ]);
+  });
+
+  it('AUD-2: building hits carry the material, and each material sounds different', () => {
+    const cues = new SoundDirector(config).cues(
+      MATERIALS.map((m) => bounce(m)),
+      0,
+    );
+    expect(cues.map((c) => c.material)).toEqual([...MATERIALS]);
+    const fixed = () => 0.5;
+    for (const kind of ['impact', 'destroy'] as const) {
+      const shapes = MATERIALS.map((material) =>
+        JSON.stringify(recipe({ kind, material, intensity: 0.5, size: 0.5 }, fixed)),
+      );
+      expect(new Set(shapes).size).toBe(MATERIALS.length);
+    }
+  });
+
+  it('AUD-3: harder hits are louder, bigger smashes are louder and longer', () => {
+    const soft: SoundCue = { kind: 'impact', material: 'stone', intensity: 0.1, size: 0 };
+    expect(cueGain({ ...soft, intensity: 0.9 }, 0, a)).toBeGreaterThan(cueGain(soft, 0, a));
+    const small: SoundCue = { kind: 'destroy', material: 'brick', intensity: 0.5, size: 0.05 };
+    const big = { ...small, size: 1 };
+    expect(cueGain(big, 0, a)).toBeGreaterThan(cueGain(small, 0, a));
+    const fixed = () => 0.5;
+    expect(layersDuration(recipe(big, fixed))).toBeGreaterThan(layersDuration(recipe(small, fixed)));
+    expect(recipe(big, fixed).length).toBeGreaterThan(recipe(small, fixed).length);
+  });
+
+  it('AUD-4: the farther the camera from the ball, the quieter', () => {
+    expect(distanceGain(a.refDistance * 0.5, a)).toBe(1);
+    expect(distanceGain(a.refDistance * 2, a)).toBeLessThan(1);
+    expect(distanceGain(80, a)).toBeLessThan(distanceGain(30, a));
+  });
+
+  it('AUD-8: faint taps are silent', () => {
+    expect(new SoundDirector(config).cues([bounce('ground', a.minImpactSpeed * 0.9)], 0)).toEqual([]);
+  });
+
+  it('AUD-8: a smash swallows the building hit of the same frame and merges same-material smashes', () => {
+    const cues = new SoundDirector(config).cues(
+      [destroy('glass', 10), bounce('glass'), destroy('glass', 10), bounce('ground')],
+      0,
+    );
+    expect(cues.map((c) => c.kind).sort()).toEqual(['destroy', 'ground']);
+    expect(cues.find((c) => c.kind === 'destroy')?.size).toBeCloseTo(20 / a.fullDestroyCells);
+  });
+
+  it('AUD-8: the same sound does not repeat within the cooldown', () => {
+    const d = new SoundDirector(config);
+    expect(d.cues([bounce('ground')], 0)).toHaveLength(1);
+    expect(d.cues([bounce('ground')], a.cooldown / 2)).toHaveLength(0);
+    expect(d.cues([bounce('boundary')], a.cooldown / 2)).toHaveLength(1);
+    expect(d.cues([bounce('ground')], a.cooldown * 1.5)).toHaveLength(1);
+  });
+
+  it('AUD-8: a ball rolling to a stop does not keep knocking', () => {
+    const grid = new VoxelGrid(40, 20, 80);
+    const world: World = { solids: grid };
+    const s = launch(new Vector3(20, 0.3, 70), flat({ elevation: 0.05, power: 0.3 }), config);
+    const d = new SoundDirector(config);
+    const cues: SoundCue[] = [];
+    for (let t = 0; !s.stopped; t += config.physics.dt) {
+      const events: SimEvent[] = [];
+      step(s, world, config, events);
+      cues.push(...d.cues(events, t));
+    }
+    // A low skimming shot hops a few times, then rolls silently.
+    expect(cues.length).toBeLessThan(6);
   });
 });

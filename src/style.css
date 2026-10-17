@@ -71,7 +71,7 @@ body {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, 1fr) auto;
   gap: 8px;
 }
 
@@ -96,6 +96,23 @@ body {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+/* AUD-5: mute toggle at the end of the stats strip. */
+#mute {
+  min-height: 0;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+}
+
+#mute .off,
+#mute.muted .on {
+  display: none;
+}
+
+#mute.muted .off {
+  display: inline;
 }
 
 .stats b {

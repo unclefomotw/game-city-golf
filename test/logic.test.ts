@@ -7,7 +7,15 @@ import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
 import { CameraRig } from '../src/render/cameraRig';
-import { DEFAULT_LEVEL_OPTIONS, generateLevel, isSolvable } from '../src/world/levelGen';
+import {
+  COVERAGE,
+  DEFAULT_LEVEL_OPTIONS,
+  generateLevel,
+  isSolvable,
+  MAX_OPEN_RUN,
+  TEE,
+  TEE_CLEARANCE,
+} from '../src/world/levelGen';
 import { findTestScene, TEST_SCENES } from '../src/world/testScenes';
 import { PreviewOverlay, VoxelGrid } from '../src/world/voxelGrid';
 
@@ -56,6 +64,60 @@ describe('level generation', () => {
       const { goal, start } = level;
       expect(Math.hypot(goal.x - start.x, goal.z - start.z)).toBeGreaterThan(30);
     }
+  });
+
+  it('LVL-1: tee is in the fixed corner with no building voxel within the clearance', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const { grid, start } = generateLevel(seed);
+      expect([start.x, start.z]).toEqual([TEE.x, TEE.z]);
+      for (let x = 0; x < grid.sizeX; x++)
+        for (let z = 0; z < grid.sizeZ; z++) {
+          // Gap from the tee center to the nearest face of column (x, z), per axis.
+          const gap = Math.max(x - start.x, start.x - (x + 1), z - start.z, start.z - (z + 1));
+          if (gap < TEE_CLEARANCE) for (let y = 0; y < grid.sizeY; y++) expect(grid.isSolid(x, y, z)).toBe(false);
+        }
+    }
+  });
+
+  it('LVL-1: no straight open line runs from one boundary to the other', () => {
+    expect(MAX_OPEN_RUN).toBeLessThan(DEFAULT_LEVEL_OPTIONS.sizeX);
+    for (let seed = 0; seed < 40; seed++) {
+      const { grid } = generateLevel(seed);
+      for (let a = 0; a < grid.sizeX; a++) {
+        let row = 0;
+        let col = 0;
+        for (let b = 0; b < grid.sizeX; b++) {
+          row = grid.isSolid(b, 0, a) ? 0 : row + 1;
+          col = grid.isSolid(a, 0, b) ? 0 : col + 1;
+          expect(Math.max(row, col)).toBeLessThanOrEqual(MAX_OPEN_RUN);
+        }
+      }
+    }
+  });
+
+  it('LVL-1: open ground stays plentiful', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const { grid } = generateLevel(seed);
+      let solid = 0;
+      for (let x = 0; x < grid.sizeX; x++) for (let z = 0; z < grid.sizeZ; z++) if (grid.isSolid(x, 0, z)) solid++;
+      const share = solid / (grid.sizeX * grid.sizeZ);
+      expect(share).toBeGreaterThanOrEqual(COVERAGE);
+      expect(share).toBeLessThan(COVERAGE + 0.2);
+    }
+  });
+
+  it('LVL-1: buildings reach the field boundary instead of leaving an empty border', () => {
+    let touching = 0;
+    for (let seed = 0; seed < 40; seed++) {
+      const { grid } = generateLevel(seed);
+      const last = grid.sizeX - 1;
+      for (let i = 0; i < grid.sizeX; i++)
+        if (grid.isSolid(last, 0, i) || grid.isSolid(i, 0, last) || grid.isSolid(0, 0, i) || grid.isSolid(i, 0, 0)) {
+          touching++;
+          break;
+        }
+    }
+    expect(touching).toBe(40);
   });
 });
 

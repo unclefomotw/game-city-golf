@@ -33,6 +33,8 @@ export function createTuningPanel(cfg: Config): void {
   d.add(cfg.destruction, 'speedKeptPerCell', 0.9, 1, 0.001);
 
   gui.add(cfg.preview, 'seconds', 0, 3, 0.05).name('預覽秒數');
+  gui.add(cfg.preview, 'farOpacity', 0, 1, 0.05).name('預覽遠端透明度');
+  gui.add(cfg.preview, 'depthFadeSpan', 1, 30, 0.5).name('預覽漸層距離');
 
   const a = gui.addFolder('方向搖桿');
   a.add(cfg.aim, 'azimuthRateDeg', 5, 360, 5).name('水平轉速 °/s');

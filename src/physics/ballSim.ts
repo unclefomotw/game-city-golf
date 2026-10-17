@@ -233,7 +233,11 @@ export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[
   if (s.stopped) s.vel.set(0, 0, 0);
 }
 
-/** SHOT-5: positions over the first `seconds` of a shot, simulated on a scratch overlay. */
+/**
+ * SHOT-5: positions over the first `seconds` of a shot, simulated on a scratch overlay.
+ * The path ends at the first impact (bounce or destruction), so the preview
+ * never reveals how the ball will rebound.
+ */
 export function previewPath(
   start: Vector3,
   shot: ShotInput,
@@ -245,8 +249,10 @@ export function previewPath(
   const world = { solids };
   const points = [s.pos.clone()];
   const steps = Math.round(seconds / cfg.physics.dt);
+  const events: SimEvent[] = [];
   for (let i = 0; i < steps && !s.stopped; i++) {
-    step(s, world, cfg);
+    step(s, world, cfg, events);
+    if (events.length) break;
     points.push(s.pos.clone());
   }
   return points;

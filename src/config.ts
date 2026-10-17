@@ -47,6 +47,10 @@ export const config = {
   preview: {
     /** SHOT-5: only a short stretch of the trajectory is previewed. */
     seconds: 0.6,
+    /** Opacity of the preview dot farthest from the camera (the nearest is opaque). */
+    farOpacity: 0.2,
+    /** Camera-distance spread that maps to the full near-to-far fade, at minimum. */
+    depthFadeSpan: 6,
   },
   camera: {
     fov: 55,

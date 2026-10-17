@@ -2,9 +2,10 @@
 // - a 3D arrow along the launch direction (length = power)
 // - its shadow on the ground (horizontal direction)
 // - an arc between the two (elevation)
-// - a short dotted preview of the real trajectory
+// - a short dotted preview of the real trajectory, fading with camera distance
 
 import * as THREE from 'three';
+import type { Config } from '../config';
 import { horizontalDir, launchDirection, type ShotInput } from '../physics/ballSim';
 
 const MAX_DOTS = 160;
@@ -23,6 +24,7 @@ export class AimVisuals {
   private readonly groundLine: THREE.Mesh;
   private readonly arc: THREE.Line;
   private readonly dots: THREE.InstancedMesh;
+  private readonly dotOpacity = new THREE.InstancedBufferAttribute(new Float32Array(MAX_DOTS), 1);
 
   constructor() {
     this.shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 1, 8), this.arrowMat);
@@ -36,11 +38,22 @@ export class AimVisuals {
 
     this.arc = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0xffffff }));
 
-    this.dots = new THREE.InstancedMesh(
-      new THREE.SphereGeometry(0.1, 8, 6),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }),
-      MAX_DOTS,
-    );
+    const dotGeometry = new THREE.SphereGeometry(0.1, 8, 6);
+    dotGeometry.setAttribute('instanceOpacity', this.dotOpacity);
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 });
+    // Per-dot opacity, so farther dots read lighter and the line gains depth.
+    dotMat.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader
+        .replace(
+          '#include <common>',
+          '#include <common>\nattribute float instanceOpacity;\nvarying float vInstanceOpacity;',
+        )
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvInstanceOpacity = instanceOpacity;');
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nvarying float vInstanceOpacity;')
+        .replace('vec4( diffuse, opacity )', 'vec4( diffuse, opacity * vInstanceOpacity )');
+    };
+    this.dots = new THREE.InstancedMesh(dotGeometry, dotMat, MAX_DOTS);
     this.dots.frustumCulled = false;
 
     this.group.add(this.arrow, this.groundLine, this.arc, this.dots);
@@ -52,7 +65,13 @@ export class AimVisuals {
     });
   }
 
-  update(ball: THREE.Vector3, shot: ShotInput, preview: THREE.Vector3[]): void {
+  update(
+    ball: THREE.Vector3,
+    shot: ShotInput,
+    preview: THREE.Vector3[],
+    cameraPos: THREE.Vector3,
+    opts: Config['preview'],
+  ): void {
     const dir = launchDirection(shot.azimuth, shot.elevation);
     const flat = horizontalDir(shot.azimuth);
     const len = 1 + shot.power * 5;
@@ -86,13 +105,22 @@ export class AimVisuals {
 
     // Preview dots, thinned out so spacing reads as speed.
     const m = new THREE.Matrix4();
-    let n = 0;
-    for (let i = 3; i < preview.length && n < MAX_DOTS; i += 3) {
+    const dist: number[] = [];
+    for (let i = 3; i < preview.length && dist.length < MAX_DOTS; i += 3) {
       m.makeTranslation(preview[i].x, preview[i].y, preview[i].z);
-      this.dots.setMatrixAt(n++, m);
+      this.dots.setMatrixAt(dist.length, m);
+      dist.push(preview[i].distanceTo(cameraPos));
     }
-    this.dots.count = n;
+    // Nearest dot is opaque, farther ones fade toward farOpacity. The span has
+    // a floor so a line seen side-on (all dots about equally far) stays even.
+    const near = Math.min(...dist);
+    const span = Math.max(opts.depthFadeSpan, Math.max(...dist) - near);
+    dist.forEach((d, i) => {
+      this.dotOpacity.setX(i, THREE.MathUtils.lerp(1, opts.farOpacity, (d - near) / span));
+    });
+    this.dots.count = dist.length;
     this.dots.instanceMatrix.needsUpdate = true;
+    this.dotOpacity.needsUpdate = true;
   }
 
   set visible(v: boolean) {

@@ -245,6 +245,29 @@ describe('destruction', () => {
       expect(s.pos.distanceTo(preview[i])).toBeLessThan(1e-9);
     }
   });
+
+  it('SHOT-5: preview ends at the first building impact', () => {
+    const start = new Vector3(100, 2, 185);
+    const preview = previewPath(start, flat({ elevation: 0.05, power: 1 }), new PreviewOverlay(wallGrid()), config, 1);
+    // The wall face is at z = 172; nothing past or rebounding from it is shown.
+    for (const p of preview) expect(p.z).toBeGreaterThan(172);
+    expect(preview.at(-1)!.z).toBeLessThan(174);
+  });
+
+  it('SHOT-5: preview ends at the first ground bounce', () => {
+    const grid = new VoxelGrid(200, 60, 200);
+    const start = new Vector3(100, 0.3, 190);
+    const preview = previewPath(start, flat({ elevation: 0.6, power: 0.2 }), new PreviewOverlay(grid), config, 3);
+    // Up, then down, and stop: the height never rises again after descending.
+    let descending = false;
+    for (let i = 1; i < preview.length; i++) {
+      const dy = preview[i].y - preview[i - 1].y;
+      if (dy < 0) descending = true;
+      if (descending) expect(dy).toBeLessThanOrEqual(0);
+    }
+    expect(descending).toBe(true);
+    expect(preview.at(-1)!.y).toBeLessThan(1);
+  });
 });
 
 describe('game flow', () => {

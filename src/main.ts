@@ -230,7 +230,7 @@ function frame(now: number): void {
   aimVisuals.visible = aiming;
   if (aiming) {
     const preview = previewPath(game.ball.pos, shot, new PreviewOverlay(level.grid), config, config.preview.seconds);
-    aimVisuals.update(game.ball.pos, shot, preview);
+    aimVisuals.update(game.ball.pos, shot, preview, view.camera.position, config.preview);
   }
 
   syncPanel(game.phase);

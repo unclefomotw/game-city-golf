@@ -6,6 +6,8 @@ import { VoxelGrid } from './voxelGrid';
 export const GROUND_ROAD = 1;
 export const GROUND_BLOCK = 0;
 export const GROUND_PLAZA = 2;
+/** Distance markings in developer test scenes (ADR-010). */
+export const GROUND_MARK = 3;
 
 export type Building = { id: number; color: number };
 

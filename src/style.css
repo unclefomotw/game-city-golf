@@ -308,3 +308,15 @@ button.primary {
   /* biome-ignore lint/complexity/noImportantStyles: [hidden] must win over any display rule */
   display: none !important;
 }
+
+/* ADR-010: dev-only test scene picker, added by main.ts. */
+#scene-picker {
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px dashed var(--button-hover);
+  border-radius: 8px;
+  padding: 8px;
+  min-height: 40px;
+}

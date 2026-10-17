@@ -30,6 +30,7 @@ src/
   core/rng.ts          帶 seed 的亂數（LVL-2）
   world/voxelGrid.ts   建築格子 VoxelGrid；預覽用的 PreviewOverlay（SHOT-5）
   world/levelGen.ts    城市生成與可完成性檢查（LVL-1 ~ LVL-3）
+  world/testScenes.ts  開發者測試場景（預先定義，只在開發模式出現，ADR-010）
   physics/ballSim.ts   球的運動、碰撞、挖洞、預覽軌跡（純邏輯）
   game/game.ts         桿數、罰桿、完成判定的狀態機（純邏輯）
   game/scoring.ts      破壞分數規則（DES-7）
@@ -138,6 +139,19 @@ Spec 有很多項目要「實際遊玩後逐步決定」（SHOT-2、SHOT-4、LVL
 
 - `npm run dev` 會帶 `--host` 啟動，手機連同一個 Wi-Fi，開啟終端機顯示的 Network 網址即可試玩。
 - 「新地圖」會換一個 seed 並重新載入；完成畫面可以選「再玩這張地圖」。
+
+### 開發者測試場景（ADR-010）
+
+給開發者觀察擊球手感用的預先定義場景，不是遊戲內容，玩家不會碰到。
+
+- 開啟方式：網址帶 `?scene=<id>`，或在面板最下方的「測試場景」下拉選單挑選（選了會重新載入）。選「無」回到隨機城市；按「新地圖」也會離開測試場景。
+- 只在開發模式（`npm run dev`）有效。正式 build 裡 `import.meta.env.DEV` 為 false，`?scene=` 會被忽略，選單不會出現，場景程式碼也會被 tree-shake 掉。一般玩法的隨機 seed 一律走 `generateLevel`，不可能抽到測試場景。
+- 新增場景：在 `src/world/testScenes.ts` 的 `TEST_SCENES` 加一筆 `{ id, label, build }`，`build` 回傳一個 `Level`。測試會自動檢查每個場景都能完成。
+- 目前的場景：
+
+| id | 內容 | 用途 |
+|---|---|---|
+| `empty` | 場地大小與正式關卡相同，沒有任何建築。起點在角落 (4.5, 4.5)，終點在對角。地上以起點為圓心，每 10 格畫一圈淺色距離環。 | 專心觀察擊球操作、實際球路、力道與距離的關係 |
 
 ## 已知限制
 

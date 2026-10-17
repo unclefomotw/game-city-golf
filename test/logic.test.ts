@@ -4,7 +4,8 @@ import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
-import { generateLevel, isSolvable } from '../src/world/levelGen';
+import { DEFAULT_LEVEL_OPTIONS, generateLevel, isSolvable } from '../src/world/levelGen';
+import { findTestScene, TEST_SCENES } from '../src/world/testScenes';
 import { PreviewOverlay, VoxelGrid } from '../src/world/voxelGrid';
 
 const flat = (shot: Partial<ShotInput> = {}): ShotInput => ({
@@ -52,6 +53,27 @@ describe('level generation', () => {
       const { goal, start } = level;
       expect(Math.hypot(goal.x - start.x, goal.z - start.z)).toBeGreaterThan(30);
     }
+  });
+});
+
+describe('test scenes (ADR-010)', () => {
+  it('every scene is solvable with tee and goal inside the field', () => {
+    for (const scene of TEST_SCENES) {
+      const level = scene.build(DEFAULT_LEVEL_OPTIONS);
+      expect(isSolvable(level)).toBe(true);
+      expect(findTestScene(scene.id)).toBe(scene);
+    }
+  });
+
+  it('the empty scene has no buildings', () => {
+    const level = findTestScene('empty')!.build(DEFAULT_LEVEL_OPTIONS);
+    expect(level.grid.countSolid()).toBe(0);
+    expect(level.buildings).toEqual([]);
+  });
+
+  it('unknown ids find nothing', () => {
+    expect(findTestScene('nope')).toBeNull();
+    expect(findTestScene(null)).toBeNull();
   });
 });
 

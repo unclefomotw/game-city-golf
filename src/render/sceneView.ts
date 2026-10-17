@@ -2,7 +2,7 @@
 
 import * as THREE from 'three';
 import type { Config } from '../config';
-import { GROUND_PLAZA, GROUND_ROAD, type Level } from '../world/levelGen';
+import { GROUND_MARK, GROUND_PLAZA, GROUND_ROAD, type Level } from '../world/levelGen';
 
 export class SceneView {
   readonly renderer: THREE.WebGLRenderer;
@@ -123,7 +123,8 @@ export class SceneView {
     for (let z = 0; z < sizeZ; z++)
       for (let x = 0; x < sizeX; x++) {
         const g = level.ground[x + z * sizeX];
-        ctx.fillStyle = g === GROUND_ROAD ? '#6b7078' : g === GROUND_PLAZA ? '#8fcf7a' : '#c9c4b8';
+        ctx.fillStyle =
+          g === GROUND_ROAD ? '#6b7078' : g === GROUND_PLAZA ? '#8fcf7a' : g === GROUND_MARK ? '#e8e4d8' : '#c9c4b8';
         ctx.fillRect(x * px, z * px, px, px);
       }
     const tex = new THREE.CanvasTexture(canvas);

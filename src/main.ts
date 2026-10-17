@@ -13,6 +13,7 @@ import { SceneView } from './render/sceneView';
 import { VoxelMesh } from './render/voxelMesh';
 import { HoldButton, Joystick, SpinPad } from './ui/widgets';
 import { DEFAULT_LEVEL_OPTIONS, generateLevel } from './world/levelGen';
+import { findTestScene, TEST_SCENES } from './world/testScenes';
 import { PreviewOverlay } from './world/voxelGrid';
 
 const DEG = Math.PI / 180;
@@ -20,13 +21,16 @@ const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getEleme
 
 // --- Level (LVL-2: the map code lives in the URL) ---------------------------
 const params = new URLSearchParams(location.search);
+const levelOptions = { ...DEFAULT_LEVEL_OPTIONS, ballRadius: config.physics.ballRadius };
+// ADR-010: ?scene=<id> loads a developer test scene, in dev builds only.
+const testScene = import.meta.env.DEV ? findTestScene(params.get('scene')) : null;
 let seed = parseSeed(params.get('seed'));
-if (seed === null) {
+if (seed === null && !testScene) {
   seed = randomSeed();
   params.set('seed', String(seed));
   history.replaceState(null, '', `?${params}`);
 }
-const level = generateLevel(seed, { ...DEFAULT_LEVEL_OPTIONS, ballRadius: config.physics.ballRadius });
+const level = testScene ? testScene.build(levelOptions) : generateLevel(seed ?? 0, levelOptions);
 const game = new Game(level, config);
 
 // --- Scene ---------------------------------------------------------------------
@@ -87,13 +91,31 @@ $('ghost').addEventListener('click', () => {
   else rig.returnToBall();
 });
 const newMap = () => {
+  params.delete('scene');
   params.set('seed', String(randomSeed()));
   location.search = `?${params}`;
 };
 $('new-map').addEventListener('click', newMap);
 $('win-new').addEventListener('click', newMap);
 $('replay').addEventListener('click', () => location.reload());
-$('seed').textContent = String(seed);
+$('seed').textContent = testScene ? testScene.label : String(seed);
+if (import.meta.env.DEV) addScenePicker();
+
+/** ADR-010: dev-only picker; choosing a scene reloads with ?scene=<id>. */
+function addScenePicker(): void {
+  const picker = document.createElement('select');
+  picker.id = 'scene-picker';
+  picker.add(new Option('測試場景：無（隨機城市）', ''));
+  for (const s of TEST_SCENES) picker.add(new Option(`測試場景：${s.label}`, s.id));
+  picker.value = testScene?.id ?? '';
+  picker.addEventListener('change', () => {
+    params.delete('seed');
+    if (picker.value) params.set('scene', picker.value);
+    else params.delete('scene');
+    location.search = `?${params}`;
+  });
+  $('panel').append(picker);
+}
 
 let toastTimer = 0;
 function toast(text: string): void {

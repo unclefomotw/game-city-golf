@@ -78,7 +78,11 @@ export class SpinPad {
   }
 }
 
-/** ADR-007: on-screen joystick for free-camera movement, placed outside the square view. */
+/**
+ * On-screen joystick placed outside the square view: free-camera movement (ADR-007)
+ * and shot direction (ADR-013). x/y are -1..1 with screen axes (y > 0 = pulled down);
+ * it springs back to the centre on release.
+ */
 export class Joystick {
   x = 0;
   y = 0;
@@ -110,6 +114,8 @@ export class Joystick {
     });
     base.addEventListener('pointerup', release);
     base.addEventListener('pointercancel', release);
+    // Also fires when the stick is hidden mid-drag (e.g. entering free-camera mode).
+    base.addEventListener('lostpointercapture', release);
   }
 }
 

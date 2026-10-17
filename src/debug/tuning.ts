@@ -34,6 +34,14 @@ export function createTuningPanel(cfg: Config): void {
 
   gui.add(cfg.preview, 'seconds', 0, 3, 0.05).name('預覽秒數');
 
+  const a = gui.addFolder('方向搖桿');
+  a.add(cfg.aim, 'azimuthRateDeg', 5, 360, 5).name('水平轉速 °/s');
+  a.add(cfg.aim, 'elevationRateDeg', 5, 240, 5).name('仰角轉速 °/s');
+  a.add(cfg.aim, 'stickDeadZone', 0, 0.5, 0.01).name('中心死區');
+  a.add(cfg.aim, 'stickExponent', 1, 4, 0.1).name('反應曲線');
+  a.add(cfg.aim, 'keyboardDeflection', 0.1, 1, 0.05).name('方向鍵力度');
+  a.close();
+
   const c = gui.addFolder('相機');
   c.add(cfg.camera, 'freeSpeed', 2, 60, 1);
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);

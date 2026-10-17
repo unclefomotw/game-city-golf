@@ -33,22 +33,15 @@
         </div>
 
         <section id="aim-controls">
-          <div class="aim-sliders">
-            <label class="slider">
-              <span>力道 <b id="power-val"></b></span>
-              <input id="power" type="range" min="0" max="100" step="1" />
-            </label>
-            <label class="slider">
-              <span>仰角 <b id="elev-val"></b></span>
-              <input id="elev" type="range" min="-45" max="89" step="1" />
-            </label>
-            <div class="direction">
-              <span>方向</span>
-              <button type="button" id="az-left" aria-label="向左轉">◀</button>
-              <b id="az-val"></b>
-              <button type="button" id="az-right" aria-label="向右轉">▶</button>
-            </div>
+          <div class="aim-dir">
+            <div id="aim-stick" class="stick" title="左右＝轉水平方向，上下＝調仰角；推越遠轉越快"><div class="knob"></div></div>
+            <div class="readout"><span>方向</span> <b id="az-val"></b></div>
+            <div class="readout"><span>仰角</span> <b id="elev-val"></b></div>
           </div>
+          <label class="slider power">
+            <span>力道 <b id="power-val"></b></span>
+            <input id="power" type="range" min="0" max="100" step="1" />
+          </label>
           <div class="spin">
             <canvas id="spin-pad" title="點選擊球點：左右＝側旋，上＝上旋，下＝下旋"></canvas>
             <div class="spin-label">旋轉 <b id="spin-val"></b></div>
@@ -57,7 +50,7 @@
         </section>
 
         <section id="free-controls" hidden>
-          <div id="joystick"><div class="knob"></div></div>
+          <div id="joystick" class="stick"><div class="knob"></div></div>
           <div class="updown">
             <button type="button" id="fly-up">上升</button>
             <button type="button" id="fly-down">下降</button>

@@ -243,9 +243,19 @@ input[type="range"] {
   gap: 10px;
 }
 
+.shot-row {
+  display: flex;
+  gap: 8px;
+}
+
+/* Ghost fills the whole row while #fire is hidden in free-camera mode. */
+#ghost {
+  flex: 1;
+}
+
 .actions {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -282,6 +292,7 @@ button.primary {
 }
 
 #fire {
+  flex: 2;
   font-size: 20px;
   min-height: 52px;
 }

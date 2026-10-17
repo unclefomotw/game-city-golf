@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { config } from './config';
 import { parseSeed, randomSeed } from './core/rng';
 import { Game, type Phase } from './game/game';
+import { type InputKind, trackInputKind } from './input/inputKind';
 import { ViewInput } from './input/viewInput';
 import { previewPath, type ShotInput } from './physics/ballSim';
 import { AimVisuals } from './render/aimVisuals';
@@ -117,6 +118,19 @@ function addScenePicker(): void {
   $('panel').append(picker);
 }
 
+// PLT-3 / ADR-012: hints describe only the input the player is using.
+const inputKind = trackInputKind();
+const HINTS: Record<InputKind, { free: string; aim: string }> = {
+  mouse: {
+    free: '靈魂出竅：WASD 移動（往視線方向前進）、Q/E 下降／上升、Shift 加速，拖曳畫面轉視角，滾輪拉近／拉遠。',
+    aim: '從球往反方向拖曳（彈弓式）設定方向與力道，仰角與旋轉在上方調整，再按「擊球」。拖曳空白處旋轉視角，滾輪拉近／拉遠。',
+  },
+  touch: {
+    free: '靈魂出竅：用搖桿移動（往視線方向前進）、升降按鈕上下，單指拖曳畫面轉視角，雙指捏合拉近／拉遠。',
+    aim: '從球往反方向拖曳（彈弓式）設定方向與力道，仰角與旋轉在上方調整，再按「擊球」。拖曳空白處旋轉視角，雙指捏合拉近／拉遠。',
+  },
+};
+
 let toastTimer = 0;
 function toast(text: string): void {
   const el = $('toast');
@@ -148,11 +162,8 @@ function syncPanel(phase: Phase): void {
     Math.abs(v) < 0.05 ? '' : `${v > 0 ? pos : neg}${Math.round(Math.abs(v) * 100)}%`;
   $('spin-val').textContent =
     [spinText(shot.sideSpin, '右旋', '左旋'), spinText(shot.topSpin, '上旋', '下旋')].filter(Boolean).join(' ') || '無';
-  $('hint').textContent = free
-    ? '靈魂出竅：WASD 移動（往視線方向前進）、Q/E 下降／上升、Shift 加速，拖曳畫面轉視角；手機用搖桿移動、雙指捏合前進後退。'
-    : phase === 'flying'
-      ? '球飛行中…'
-      : '從球往反方向拖曳（彈弓式）設定方向與力道，仰角與旋轉在上方調整，再按「擊球」。拖曳空白處旋轉視角，滾輪／雙指縮放。';
+  const hints = HINTS[inputKind()];
+  $('hint').textContent = free ? hints.free : phase === 'flying' ? '球飛行中…' : hints.aim;
 }
 
 // --- Input on the square view -------------------------------------------------------

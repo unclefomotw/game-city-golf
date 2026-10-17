@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
+import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
 import { CameraRig } from '../src/render/cameraRig';
 import { DEFAULT_LEVEL_OPTIONS, generateLevel, isSolvable } from '../src/world/levelGen';
@@ -235,5 +236,18 @@ describe('free camera (CAM-1, ADR-011)', () => {
     rig.update(0.5, new Vector3(), { ...still, up: 1 });
     expect(cam.position.y).toBeGreaterThan(20);
     expect(cam.position.z).toBeCloseTo(50);
+  });
+});
+
+describe('input kind for hints (PLT-3, ADR-012)', () => {
+  it('follows the pointer type of the last input', () => {
+    expect(inputKindFromPointer('mouse', 'touch')).toBe('mouse');
+    expect(inputKindFromPointer('touch', 'mouse')).toBe('touch');
+    expect(inputKindFromPointer('pen', 'mouse')).toBe('touch');
+  });
+
+  it('keeps the current kind for unknown pointer types', () => {
+    expect(inputKindFromPointer('', 'touch')).toBe('touch');
+    expect(inputKindFromPointer('', 'mouse')).toBe('mouse');
   });
 });

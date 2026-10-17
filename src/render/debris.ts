@@ -3,8 +3,8 @@
 
 import * as THREE from 'three';
 import type { Config } from '../config';
-import type { RemovedCell } from '../world/voxelGrid';
 import type { Building } from '../world/levelGen';
+import type { RemovedCell } from '../world/voxelGrid';
 
 type Particle = {
   pos: THREE.Vector3;
@@ -86,7 +86,7 @@ export class Debris {
         p.vel.z *= 0.7;
       }
       p.angle += p.spinRate * dt;
-      const shrink = p.size * (1 - Math.pow(p.age / d.lifetime, 2));
+      const shrink = p.size * (1 - (p.age / d.lifetime) ** 2);
       q.setFromAxisAngle(p.axis, p.angle);
       m.compose(p.pos, q, s.setScalar(shrink));
       this.mesh.setMatrixAt(i, m);

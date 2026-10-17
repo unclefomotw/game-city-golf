@@ -39,15 +39,17 @@ export function createTuningPanel(cfg: Config): void {
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);
   c.close();
 
-  gui.add(
-    {
-      export: () => {
-        const json = JSON.stringify(cfg, null, 2);
-        navigator.clipboard?.writeText(json).catch(() => {});
-        console.log(json);
-        alert('設定已複製到剪貼簿（也印在 console）');
+  gui
+    .add(
+      {
+        export: () => {
+          const json = JSON.stringify(cfg, null, 2);
+          navigator.clipboard?.writeText(json).catch(() => {});
+          console.log(json);
+          alert('設定已複製到剪貼簿（也印在 console）');
+        },
       },
-    },
-    'export',
-  ).name('匯出設定');
+      'export',
+    )
+    .name('匯出設定');
 }

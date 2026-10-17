@@ -138,7 +138,9 @@ export class CameraRig {
     }
     if (this.shakeAmount > 0.001) {
       const a = this.shakeAmount * 0.4;
-      cam.position.add(new THREE.Vector3((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a));
+      cam.position.add(
+        new THREE.Vector3((Math.random() - 0.5) * a, (Math.random() - 0.5) * a, (Math.random() - 0.5) * a),
+      );
       this.shakeAmount *= Math.exp(-6 * dt);
     }
   }

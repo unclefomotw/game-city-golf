@@ -41,7 +41,10 @@ export class SceneView {
 
     this.scene.add(this.createGround(level));
     // Land beyond the field so the view never shows a void past the edge.
-    const outside = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), new THREE.MeshLambertMaterial({ color: 0x8aa37a }));
+    const outside = new THREE.Mesh(
+      new THREE.PlaneGeometry(600, 600),
+      new THREE.MeshLambertMaterial({ color: 0x8aa37a }),
+    );
     outside.rotation.x = -Math.PI / 2;
     outside.position.set(sizeX / 2, -0.02, sizeZ / 2);
     outside.receiveShadow = true;
@@ -52,7 +55,13 @@ export class SceneView {
     const { goal } = level;
     this.goalBeam = new THREE.Mesh(
       new THREE.CylinderGeometry(goal.radius, goal.radius, sizeY, 24, 1, true),
-      new THREE.MeshBasicMaterial({ color: 0xffe14d, transparent: true, opacity: 0.18, side: THREE.DoubleSide, depthWrite: false }),
+      new THREE.MeshBasicMaterial({
+        color: 0xffe14d,
+        transparent: true,
+        opacity: 0.18,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
     );
     this.goalBeam.position.set(goal.x, sizeY / 2, goal.z);
     this.goalRing = new THREE.Mesh(
@@ -62,9 +71,15 @@ export class SceneView {
     this.goalRing.rotation.x = -Math.PI / 2;
     this.goalRing.position.set(goal.x, 0.03, goal.z);
     const flag = new THREE.Group();
-    const pole = new THREE.Mesh(new THREE.BoxGeometry(0.15, 4, 0.15), new THREE.MeshLambertMaterial({ color: 0xffffff }));
+    const pole = new THREE.Mesh(
+      new THREE.BoxGeometry(0.15, 4, 0.15),
+      new THREE.MeshLambertMaterial({ color: 0xffffff }),
+    );
     pole.position.y = 2;
-    const cloth = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 0.05), new THREE.MeshLambertMaterial({ color: 0xff3b30 }));
+    const cloth = new THREE.Mesh(
+      new THREE.BoxGeometry(1.4, 0.9, 0.05),
+      new THREE.MeshLambertMaterial({ color: 0xff3b30 }),
+    );
     cloth.position.set(0.7, 3.5, 0);
     flag.add(pole, cloth);
     flag.position.set(goal.x, 0, goal.z);
@@ -85,7 +100,13 @@ export class SceneView {
     // X-ray copy drawn on top so the ball stays visible behind buildings.
     const xray = new THREE.Mesh(
       this.ball.geometry,
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4, depthTest: false, depthWrite: false }),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.4,
+        depthTest: false,
+        depthWrite: false,
+      }),
     );
     xray.renderOrder = 10;
     this.ball.add(xray);

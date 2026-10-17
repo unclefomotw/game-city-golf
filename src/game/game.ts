@@ -2,7 +2,7 @@
 
 import { Vector3 } from 'three';
 import type { Config } from '../config';
-import { launch, step, type BallState, type ShotInput, type SimEvent } from '../physics/ballSim';
+import { type BallState, launch, type ShotInput, type SimEvent, step } from '../physics/ballSim';
 import type { Level } from '../world/levelGen';
 import { scoreForDestruction } from './scoring';
 

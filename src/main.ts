@@ -120,8 +120,10 @@ function syncPanel(phase: Phase): void {
   const rel = THREE.MathUtils.euclideanModulo(shot.azimuth - toGoal + Math.PI, Math.PI * 2) - Math.PI;
   $('az-val').textContent = `${rel >= 0 ? '右' : '左'} ${Math.abs(Math.round(rel / DEG))}°`;
   $('az-val').title = '相對於終點方向';
-  const spinText = (v: number, pos: string, neg: string) => (Math.abs(v) < 0.05 ? '' : `${v > 0 ? pos : neg}${Math.round(Math.abs(v) * 100)}%`);
-  $('spin-val').textContent = [spinText(shot.sideSpin, '右旋', '左旋'), spinText(shot.topSpin, '上旋', '下旋')].filter(Boolean).join(' ') || '無';
+  const spinText = (v: number, pos: string, neg: string) =>
+    Math.abs(v) < 0.05 ? '' : `${v > 0 ? pos : neg}${Math.round(Math.abs(v) * 100)}%`;
+  $('spin-val').textContent =
+    [spinText(shot.sideSpin, '右旋', '左旋'), spinText(shot.topSpin, '上旋', '下旋')].filter(Boolean).join(' ') || '無';
   $('hint').textContent = free
     ? '靈魂出竅：WASD 移動、Q/E 下降／上升、Shift 加速，拖曳畫面轉視角；手機用搖桿移動、雙指捏合前進後退。'
     : phase === 'flying'

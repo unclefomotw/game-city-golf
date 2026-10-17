@@ -71,20 +71,26 @@ const tmp2 = new Vector3();
 /** Contacts with the ground plane and the indestructible field box (FLD-1). */
 function boundaryContacts(pos: Vector3, r: number, solids: SolidQuery, out: Contact[]): void {
   if (pos.y < r) out.push({ normal: new Vector3(0, 1, 0), depth: r - pos.y, surface: 'ground' });
-  if (pos.y > solids.sizeY - r) out.push({ normal: new Vector3(0, -1, 0), depth: pos.y - (solids.sizeY - r), surface: 'boundary' });
+  if (pos.y > solids.sizeY - r)
+    out.push({ normal: new Vector3(0, -1, 0), depth: pos.y - (solids.sizeY - r), surface: 'boundary' });
   if (pos.x < r) out.push({ normal: new Vector3(1, 0, 0), depth: r - pos.x, surface: 'boundary' });
-  if (pos.x > solids.sizeX - r) out.push({ normal: new Vector3(-1, 0, 0), depth: pos.x - (solids.sizeX - r), surface: 'boundary' });
+  if (pos.x > solids.sizeX - r)
+    out.push({ normal: new Vector3(-1, 0, 0), depth: pos.x - (solids.sizeX - r), surface: 'boundary' });
   if (pos.z < r) out.push({ normal: new Vector3(0, 0, 1), depth: r - pos.z, surface: 'boundary' });
-  if (pos.z > solids.sizeZ - r) out.push({ normal: new Vector3(0, 0, -1), depth: pos.z - (solids.sizeZ - r), surface: 'boundary' });
+  if (pos.z > solids.sizeZ - r)
+    out.push({ normal: new Vector3(0, 0, -1), depth: pos.z - (solids.sizeZ - r), surface: 'boundary' });
 }
 
 /** Merges all overlapping building cells into one contact (or null). */
 function buildingContact(pos: Vector3, r: number, solids: SolidQuery): Contact | null {
   const normal = new Vector3();
   let maxDepth = 0;
-  const x0 = Math.floor(pos.x - r), x1 = Math.floor(pos.x + r);
-  const y0 = Math.floor(pos.y - r), y1 = Math.floor(pos.y + r);
-  const z0 = Math.floor(pos.z - r), z1 = Math.floor(pos.z + r);
+  const x0 = Math.floor(pos.x - r),
+    x1 = Math.floor(pos.x + r);
+  const y0 = Math.floor(pos.y - r),
+    y1 = Math.floor(pos.y + r);
+  const z0 = Math.floor(pos.z - r),
+    z1 = Math.floor(pos.z + r);
   for (let y = y0; y <= y1; y++)
     for (let z = z0; z <= z1; z++)
       for (let x = x0; x <= x1; x++) {
@@ -128,7 +134,9 @@ function buildingContact(pos: Vector3, r: number, solids: SolidQuery): Contact |
 function dig(solids: SolidQuery, impact: Vector3, radius: number): RemovedCell[] {
   const removed: RemovedCell[] = [];
   const reach = Math.ceil(radius);
-  const cx = Math.floor(impact.x), cy = Math.floor(impact.y), cz = Math.floor(impact.z);
+  const cx = Math.floor(impact.x),
+    cy = Math.floor(impact.y),
+    cz = Math.floor(impact.z);
   for (let y = cy - reach; y <= cy + reach; y++)
     for (let z = cz - reach; z <= cz + reach; z++)
       for (let x = cx - reach; x <= cx + reach; x++) {
@@ -199,7 +207,7 @@ export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[
           events?.push({ type: 'destroy', cells, impact, speed: impactSpeed });
           bc = buildingContact(s.pos, r, world.solids);
           // Punched through: the ball keeps going, slowed by what it smashed.
-          if (!bc) s.vel.multiplyScalar(Math.pow(d.speedKeptPerCell, cells.length));
+          if (!bc) s.vel.multiplyScalar(d.speedKeptPerCell ** cells.length);
         }
       }
       if (bc) contacts.push(bc);
@@ -226,7 +234,13 @@ export function step(s: BallState, world: World, cfg: Config, events?: SimEvent[
 }
 
 /** SHOT-5: positions over the first `seconds` of a shot, simulated on a scratch overlay. */
-export function previewPath(start: Vector3, shot: ShotInput, solids: SolidQuery, cfg: Config, seconds: number): Vector3[] {
+export function previewPath(
+  start: Vector3,
+  shot: ShotInput,
+  solids: SolidQuery,
+  cfg: Config,
+  seconds: number,
+): Vector3[] {
   const s = launch(start, shot, cfg);
   const world = { solids };
   const points = [s.pos.clone()];

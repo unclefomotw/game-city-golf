@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
-import { launch, previewPath, step, type ShotInput } from '../src/physics/ballSim';
+import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
 import { generateLevel, isSolvable } from '../src/world/levelGen';
 import { PreviewOverlay, VoxelGrid } from '../src/world/voxelGrid';
 

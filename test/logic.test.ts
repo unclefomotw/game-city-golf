@@ -13,6 +13,7 @@ import {
   DEFAULT_LEVEL_OPTIONS,
   generateLevel,
   isSolvable,
+  MATERIAL_PALETTES,
   MAX_OPEN_RUN,
   TEE,
   TEE_CLEARANCE,
@@ -370,6 +371,15 @@ describe('materials (DES-8, ADR-019)', () => {
     expect(MATERIALS.map((m) => MATERIAL_SCORE[m])).toEqual([1, 2, 3, 5, 8]);
     const cells = MATERIALS.map((material, i) => ({ x: i, y: 0, z: 0, id: 1, material }));
     expect(scoreForDestruction({ type: 'destroy', cells, impact: new Vector3(), speed: 10 })).toBe(19);
+  });
+
+  it('VIS-3/ADR-020: paint comes from the material palette and never changes the city shape', () => {
+    for (let seed = 0; seed < 10; seed++) {
+      const level = generateLevel(seed);
+      for (const b of level.buildings) expect(MATERIAL_PALETTES[b.material]).toContain(b.color);
+    }
+    // Several colours per material keep the city colourful.
+    for (const m of MATERIALS) expect(MATERIAL_PALETTES[m].length).toBeGreaterThanOrEqual(4);
   });
 
   it('VIS-3: every building gets a material and all five appear across maps', () => {

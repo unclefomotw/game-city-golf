@@ -3,8 +3,8 @@
 
 import * as THREE from 'three';
 import type { Config } from '../config';
+import type { Building } from '../world/levelGen';
 import type { RemovedCell } from '../world/voxelGrid';
-import { MATERIAL_COLORS } from './materialTextures';
 
 type Particle = {
   pos: THREE.Vector3;
@@ -30,7 +30,7 @@ export class Debris {
     this.particles = new Array(cap).fill(null);
   }
 
-  spawn(cells: RemovedCell[], impact: THREE.Vector3, speed: number): void {
+  spawn(cells: RemovedCell[], impact: THREE.Vector3, speed: number, buildings: Building[]): void {
     const d = this.cfg.debris;
     const color = new THREE.Color();
     for (const cell of cells) {
@@ -52,7 +52,7 @@ export class Debris {
           age: 0,
           size: 0.35 + Math.random() * 0.35,
         };
-        color.set(MATERIAL_COLORS[cell.material]).offsetHSL(0, 0, (Math.random() - 0.5) * 0.1);
+        color.set(buildings[cell.id - 1]?.color ?? 0xcccccc).offsetHSL(0, 0, (Math.random() - 0.5) * 0.1);
         this.mesh.setColorAt(slot, color);
       }
     }

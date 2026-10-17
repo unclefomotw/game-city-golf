@@ -17,10 +17,31 @@ const NEIGHBOURS = [
   [0, 0, -1],
 ] as const;
 
+const WHITE = new THREE.Color(1, 1, 1);
+
+/**
+ * Materials whose tile has no up direction. Each of their cells is turned by a
+ * random multiple of 90 degrees per axis, so a big wall doesn't show one
+ * repeated tile (ADR-020). A unit cube is unchanged by these turns, so only the
+ * texture orientation on each face changes; mirroring is avoided because it
+ * flips face winding.
+ */
+const ROTATED_TILES: ReadonlySet<MaterialKind> = new Set(['stone']);
+const QUARTER_TURNS: THREE.Matrix4[] = [];
+for (let a = 0; a < 4; a++)
+  for (let b = 0; b < 4; b++)
+    for (let c = 0; c < 4; c++)
+      QUARTER_TURNS.push(
+        new THREE.Matrix4().makeRotationFromEuler(
+          new THREE.Euler((a * Math.PI) / 2, (b * Math.PI) / 2, (c * Math.PI) / 2),
+        ),
+      );
+
 export class VoxelMesh {
   readonly group = new THREE.Group();
   private readonly meshes = {} as Record<MaterialKind, THREE.InstancedMesh>;
   private readonly materialOf: MaterialOf;
+  private readonly colors: THREE.Color[];
   private builtVersion = -1;
 
   constructor(
@@ -28,6 +49,7 @@ export class VoxelMesh {
     buildings: Building[],
   ) {
     this.materialOf = materialLookup(buildings);
+    this.colors = buildings.map((b) => new THREE.Color(b.color));
     // A material can never show more cells than it has solid ones.
     const capacity = Object.fromEntries(MATERIALS.map((m) => [m, 0])) as Record<MaterialKind, number>;
     for (const c of grid.cells) if (c !== 0) capacity[this.materialOf(c)]++;
@@ -77,11 +99,17 @@ export class VoxelMesh {
           const kind = this.materialOf(id);
           const mesh = this.meshes[kind];
           const n = count[kind]++;
-          m.makeTranslation(x + 0.5, y + 0.5, z + 0.5);
+          if (ROTATED_TILES.has(kind)) {
+            const turn = Math.floor(VoxelMesh.hash(z, x, y) * QUARTER_TURNS.length);
+            m.copy(QUARTER_TURNS[turn]).setPosition(x + 0.5, y + 0.5, z + 0.5);
+          } else {
+            m.makeTranslation(x + 0.5, y + 0.5, z + 0.5);
+          }
           mesh.setMatrixAt(n, m);
-          // The texture carries the colour; tint only shades buildings and cells apart (VIS-1).
-          const shade = 1 + (VoxelMesh.hash(id, 0, 0) - 0.5) * 0.12 + (VoxelMesh.hash(x, y, z) - 0.5) * 0.06;
-          mesh.setColorAt(n, c.setScalar(shade));
+          // The texture shows the material; the building's paint is multiplied on top (ADR-020),
+          // with a little per-cell shade jitter (VIS-1).
+          c.copy(this.colors[id - 1] ?? WHITE).multiplyScalar(1 + (VoxelMesh.hash(x, y, z) - 0.5) * 0.06);
+          mesh.setColorAt(n, c);
         }
     for (const kind of MATERIALS) {
       const mesh = this.meshes[kind];

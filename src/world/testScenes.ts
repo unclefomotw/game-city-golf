@@ -1,7 +1,15 @@
 // Predefined developer test scenes (ADR-010). Not part of the player game:
 // main.ts only exposes them in dev builds, so players never get one.
 
-import { type Building, GROUND_MARK, GROUND_PLAZA, GROUND_ROAD, type Level, type LevelOptions } from './levelGen';
+import {
+  type Building,
+  GROUND_MARK,
+  GROUND_PLAZA,
+  GROUND_ROAD,
+  type Level,
+  type LevelOptions,
+  MATERIAL_PALETTES,
+} from './levelGen';
 import { MATERIALS } from './materials';
 import { VoxelGrid } from './voxelGrid';
 
@@ -37,7 +45,9 @@ function buildEmpty(opts: LevelOptions): Level {
 
 /**
  * One wall per material in a row, glass to metal from left to right (DES-8, ADR-019):
- * for comparing bounce and breakage side by side. The tee faces the middle (brick) wall.
+ * for comparing bounce and breakage side by side. Each wall is split into
+ * strips of different paint, to check that the material still reads (ADR-020).
+ * The tee faces the middle (brick) wall.
  */
 function buildMaterials(opts: LevelOptions): Level {
   const { sizeX, sizeY, sizeZ, ballRadius } = opts;
@@ -46,14 +56,21 @@ function buildMaterials(opts: LevelOptions): Level {
   const center = Math.floor(sizeX / 2);
   const start = { x: center + 0.5, y: ballRadius, z: 50.5 };
   const goal = { x: center + 0.5, z: 8.5, radius: 3 };
-  const buildings: Building[] = MATERIALS.map((material, id) => ({ id, material }));
-  const WIDTH = 8;
+  const buildings: Building[] = [];
+  const STRIPS = 4;
+  const STRIP_WIDTH = 2;
   const GAP = 4;
-  const x0 = center - Math.floor((MATERIALS.length * (WIDTH + GAP) - GAP) / 2);
-  buildings.forEach(({ id }) => {
-    const left = x0 + id * (WIDTH + GAP);
-    for (let x = left; x < left + WIDTH; x++)
-      for (let y = 0; y < 12; y++) for (let z = 28; z < 30; z++) grid.set(x, y, z, id + 1);
+  const wallWidth = STRIPS * STRIP_WIDTH;
+  const x0 = center - Math.floor((MATERIALS.length * (wallWidth + GAP) - GAP) / 2);
+  MATERIALS.forEach((material, w) => {
+    const palette = MATERIAL_PALETTES[material];
+    for (let strip = 0; strip < STRIPS; strip++) {
+      const id = buildings.length;
+      buildings.push({ id, material, color: palette[strip % palette.length] });
+      const left = x0 + w * (wallWidth + GAP) + strip * STRIP_WIDTH;
+      for (let x = left; x < left + STRIP_WIDTH; x++)
+        for (let y = 0; y < 12; y++) for (let z = 28; z < 30; z++) grid.set(x, y, z, id + 1);
+    }
   });
   for (let z = 0; z < sizeZ; z++)
     for (let x = 0; x < sizeX; x++)

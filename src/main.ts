@@ -193,7 +193,7 @@ function frame(now: number): void {
 
   for (const e of game.update(dt)) {
     if (e.type !== 'destroy') continue;
-    debris.spawn(e.cells, e.impact, e.speed);
+    debris.spawn(e.cells, e.impact, e.speed, level.buildings);
     rig.shake(Math.min(1, e.cells.length / 25));
     toast(`破壞 +${scoreForDestruction(e)}`);
   }

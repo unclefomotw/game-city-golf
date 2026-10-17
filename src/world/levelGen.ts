@@ -10,8 +10,8 @@ export const GROUND_PLAZA = 2;
 /** Distance markings in developer test scenes (ADR-010). */
 export const GROUND_MARK = 3;
 
-/** VIS-3: one material per building (one footprint rectangle). */
-export type Building = { id: number; material: MaterialKind };
+/** VIS-3: one material per building (one footprint rectangle); `color` is paint only and has no effect on play. */
+export type Building = { id: number; material: MaterialKind; color: number };
 
 export type Level = {
   seed: number;
@@ -57,6 +57,18 @@ const GOAL_MIN_DIST = 0.75;
 const MATERIAL_WEIGHTS: Record<'low' | 'tall', Record<MaterialKind, number>> = {
   low: { glass: 1, wood: 3, brick: 3, stone: 2, metal: 1 },
   tall: { glass: 3, wood: 0, brick: 1, stone: 2, metal: 2 },
+};
+
+/**
+ * Paint colours per material (ADR-020). The texture shows the material and the
+ * paint keeps the city colourful, so each material gets a cheerful range of its own.
+ */
+export const MATERIAL_PALETTES: Record<MaterialKind, readonly number[]> = {
+  glass: [0xb0f0f6, 0xbcf2cc, 0xfbe8ae, 0xd8caf6, 0xc4e0fb],
+  wood: [0xb07a48, 0xa3d4a0, 0xf0d070, 0xe8a0b0, 0xc8945c],
+  brick: [0xd9826b, 0xe0a060, 0xe8d08a, 0xf0ece4, 0xcf8f8f],
+  stone: [0xe0cc9e, 0xd8a8a0, 0xf2f0ea, 0xb8c0b0],
+  metal: [0xa86662, 0x647a9a, 0x688a6e, 0xb08e62, 0x969ca2],
 };
 
 /** Weighted pick using a single draw, so the rest of the generation sequence is unchanged. */
@@ -191,11 +203,14 @@ function tryGenerate(seed: number, rng: Rng, opts: LevelOptions): Level | null {
 
   const grid = new VoxelGrid(sizeX, sizeY, sizeZ);
   const buildings: Building[] = [];
+  // Paint draws from its own stream so colours never shift the shape of the city.
+  const paintRng = createRng((seed ^ 0x5bd1e995) >>> 0);
   for (const r of footprints) {
     const tall = rng.chance(0.2);
     const height = Math.min(sizeY - 8, tall ? rng.int(18, 30) : rng.int(4, 14));
     const id = buildings.length;
-    buildings.push({ id, material: pickMaterial(rng, MATERIAL_WEIGHTS[tall ? 'tall' : 'low']) });
+    const material = pickMaterial(rng, MATERIAL_WEIGHTS[tall ? 'tall' : 'low']);
+    buildings.push({ id, material, color: paintRng.pick(MATERIAL_PALETTES[material]) });
     for (let x = r.x0; x < r.x1; x++)
       for (let z = r.z0; z < r.z1; z++) for (let y = 0; y < height; y++) grid.set(x, y, z, id + 1);
   }

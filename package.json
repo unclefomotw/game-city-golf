@@ -9,13 +9,17 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome lint .",
+    "format": "biome check --write .",
+    "check": "biome check . && tsc --noEmit && vitest run"
   },
   "dependencies": {
     "lil-gui": "^0.21.0",
     "three": "^0.186.1"
   },
   "devDependencies": {
+    "@biomejs/biome": "2.5.15",
     "@types/three": "^0.186.0",
     "typescript": "~5.9",
     "vite": "^8.3.4",

@@ -12,6 +12,8 @@
 npm install
 npm run dev      # 開發伺服器；手機連同一個 Wi-Fi，開終端機顯示的 Network 網址
 npm test         # 單元測試
+npm run check    # 交付前檢查：格式＋lint＋型別檢查＋測試
+npm run format   # 自動修正格式與可安全修正的 lint 問題
 npm run build    # 型別檢查＋建置到 dist/
 ```
 

@@ -18,6 +18,7 @@
 | 輸入 | Pointer Events（滑鼠與觸控共用）＋鍵盤 | PLT-3, UI-3 | ADR-004 |
 | 調參面板 | lil-gui，只在網址帶 `?debug` 時載入 | SHOT-4, ACC-1 | ADR-006 |
 | 測試 | Vitest（純邏輯單元測試） | ACC-1 | — |
+| 格式與 lint | Biome（`npm run check` 一次跑完格式、lint、型別檢查、測試） | — | ADR-009 |
 | 部署 | 暫不部署；試玩透過區網內的開發伺服器（`dist/` 是純靜態檔，日後可放到任何靜態主機） | PLT-1, ACC-1 | ADR-005 |
 
 ## 模組結構

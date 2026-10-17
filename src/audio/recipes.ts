@@ -132,12 +132,8 @@ export function recipe(cue: SoundCue, rng: Rng = Math.random): Layer[] {
     case 'ground':
       return [tone('sine', 110 * p, 1, 0.14, { endFreq: 45 }), noise('lowpass', 400 * p, 0.4, 0.06)];
     case 'boundary':
-      // The invisible field wall: a synthetic "bonk" unlike any building.
-      return [
-        tone('square', 330 * p, 0.25, 0.12, { endFreq: 250 * p }),
-        tone('sine', 660 * p, 0.3, 0.18, { endFreq: 500 * p }),
-        noise('bandpass', 1200, 0.2, 0.04, { q: 2 }),
-      ];
+      // The invisible field wall: a soft, muffled thump that stays in the background.
+      return [tone('sine', 80 * p, 0.8, 0.12, { endFreq: 50 * p }), noise('lowpass', 250, 0.5, 0.08)];
     case 'impact':
       return IMPACT[cue.material ?? 'brick'](p);
     case 'destroy': {

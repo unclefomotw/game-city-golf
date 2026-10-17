@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { config } from '../src/config';
 import { createRng } from '../src/core/rng';
 import { Game } from '../src/game/game';
+import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, step } from '../src/physics/ballSim';
 import { CameraRig } from '../src/render/cameraRig';
@@ -249,5 +250,60 @@ describe('input kind for hints (PLT-3, ADR-012)', () => {
   it('keeps the current kind for unknown pointer types', () => {
     expect(inputKindFromPointer('', 'touch')).toBe('touch');
     expect(inputKindFromPointer('', 'mouse')).toBe('mouse');
+  });
+});
+
+describe('direction joystick (SHOT-1, ADR-013)', () => {
+  const DEG = Math.PI / 180;
+  const cfg = {
+    azimuthRateDeg: 90,
+    elevationRateDeg: 60,
+    stickDeadZone: 0.1,
+    stickExponent: 2,
+    minElevationDeg: -45,
+    maxElevationDeg: 89,
+  };
+  const aim = (azimuthDeg = 0, elevationDeg = 30) => ({ azimuth: azimuthDeg * DEG, elevation: elevationDeg * DEG });
+
+  it('ignores the dead zone and reaches full rate at full deflection', () => {
+    expect(stickResponse(0.05, 0.1, 2)).toBe(0);
+    expect(stickResponse(-0.1, 0.1, 2)).toBe(0);
+    expect(stickResponse(1, 0.1, 2)).toBe(1);
+    expect(stickResponse(-1, 0.1, 2)).toBe(-1);
+    expect(stickResponse(1.5, 0.1, 2)).toBe(1);
+  });
+
+  it('pushing further turns faster, with finer control near the centre', () => {
+    const half = stickResponse(0.55, 0.1, 2);
+    expect(half).toBeGreaterThan(stickResponse(0.3, 0.1, 2));
+    expect(half).toBeLessThan(stickResponse(0.8, 0.1, 2));
+    // Exponent > 1: half way out turns slower than half speed.
+    expect(half).toBeCloseTo(0.25);
+    expect(stickResponse(0.55, 0.1, 1)).toBeCloseTo(0.5);
+  });
+
+  it('right turns the azimuth up (to the right), up raises the elevation', () => {
+    const a = aim();
+    stepAim(a, { right: 1, up: 1 }, 0.5, cfg);
+    expect(a.azimuth / DEG).toBeCloseTo(45);
+    expect(a.elevation / DEG).toBeCloseTo(60);
+    stepAim(a, { right: -1, up: -1 }, 0.5, cfg);
+    expect(a.azimuth / DEG).toBeCloseTo(0);
+    expect(a.elevation / DEG).toBeCloseTo(30);
+  });
+
+  it('a centred stick keeps the aim where it is', () => {
+    const a = aim(12, 34);
+    stepAim(a, { right: 0, up: 0.05 }, 1, cfg);
+    expect(a).toEqual(aim(12, 34));
+  });
+
+  it('elevation stays within its limits', () => {
+    const a = aim(0, 80);
+    stepAim(a, { right: 0, up: 1 }, 5, cfg);
+    expect(a.elevation / DEG).toBeCloseTo(89);
+    stepAim(a, { right: 0, up: -1 }, 10, cfg);
+    expect(a.elevation / DEG).toBeCloseTo(-45);
+    expect(clampElevation(0.2, cfg)).toBe(0.2);
   });
 });

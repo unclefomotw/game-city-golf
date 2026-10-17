@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import { config } from './config';
 import { parseSeed, randomSeed } from './core/rng';
 import { Game, type Phase } from './game/game';
+import { stepAim } from './input/aimStick';
 import { type InputKind, trackInputKind } from './input/inputKind';
 import { ViewInput } from './input/viewInput';
 import { previewPath, type ShotInput } from './physics/ballSim';
@@ -60,23 +61,20 @@ rig.lookAlong(game.ball.pos, toGoal);
 
 // --- Panel ---------------------------------------------------------------------------
 const powerInput = $<HTMLInputElement>('power');
-const elevInput = $<HTMLInputElement>('elev');
-elevInput.min = String(config.aim.minElevationDeg);
-elevInput.max = String(config.aim.maxElevationDeg);
 const spinPad = new SpinPad($<HTMLCanvasElement>('spin-pad'), () => {
   shot.sideSpin = spinPad.side;
   shot.topSpin = spinPad.top;
 });
+// ADR-013: direction stick (shot aim) and free-camera stick are separate widgets;
+// only one of them is visible at a time.
+const aimStick = new Joystick($('aim-stick'));
 const joystick = new Joystick($('joystick'));
 const flyUp = new HoldButton($('fly-up'));
 const flyDown = new HoldButton($('fly-down'));
-const azStep = 1 * DEG;
-const azLeft = new HoldButton($('az-left'), () => (shot.azimuth -= azStep));
-const azRight = new HoldButton($('az-right'), () => (shot.azimuth += azStep));
-let azHoldTime = 0;
 
 powerInput.addEventListener('input', () => (shot.power = Number(powerInput.value) / 100));
-elevInput.addEventListener('input', () => (shot.elevation = Number(elevInput.value) * DEG));
+// Drop focus after a pointer drag so the arrow keys go back to aiming (ADR-013).
+powerInput.addEventListener('pointerup', () => powerInput.blur());
 $('spin-reset').addEventListener('click', () => spinPad.reset());
 
 $('fire').addEventListener('click', () => {
@@ -123,11 +121,11 @@ const inputKind = trackInputKind();
 const HINTS: Record<InputKind, { free: string; aim: string }> = {
   mouse: {
     free: '靈魂出竅：WASD 移動（往視線方向前進）、Q/E 下降／上升、Shift 加速，拖曳畫面轉視角，滾輪拉近／拉遠。',
-    aim: '從球往反方向拖曳（彈弓式）設定方向與力道，仰角與旋轉在上方調整，再按「擊球」。拖曳空白處旋轉視角，滾輪拉近／拉遠。',
+    aim: '方向鍵或拖曳方向搖桿調整擊球方向：左右轉水平方向、上下調仰角，推越遠轉越快。設定力道與旋轉後按「擊球」。拖曳畫面旋轉視角，滾輪拉近／拉遠。',
   },
   touch: {
     free: '靈魂出竅：用搖桿移動（往視線方向前進）、升降按鈕上下，單指拖曳畫面轉視角，雙指捏合拉近／拉遠。',
-    aim: '從球往反方向拖曳（彈弓式）設定方向與力道，仰角與旋轉在上方調整，再按「擊球」。拖曳空白處旋轉視角，雙指捏合拉近／拉遠。',
+    aim: '推方向搖桿調整擊球方向：左右轉水平方向、上下調仰角，推越遠轉越快，放開就停住。設定力道與旋轉後按「擊球」。單指拖曳畫面旋轉視角，雙指捏合拉近／拉遠。',
   },
 };
 
@@ -152,7 +150,6 @@ function syncPanel(phase: Phase): void {
   $('strokes').textContent = String(game.strokes);
   $('score').textContent = String(game.destructionScore);
   if (document.activeElement !== powerInput) powerInput.value = String(Math.round(shot.power * 100));
-  if (document.activeElement !== elevInput) elevInput.value = String(Math.round(shot.elevation / DEG));
   $('power-val').textContent = `${Math.round(shot.power * 100)}%`;
   $('elev-val').textContent = `${Math.round(shot.elevation / DEG)}°`;
   const rel = THREE.MathUtils.euclideanModulo(shot.azimuth - toGoal + Math.PI, Math.PI * 2) - Math.PI;
@@ -167,25 +164,11 @@ function syncPanel(phase: Phase): void {
 }
 
 // --- Input on the square view -------------------------------------------------------
-const ballScreen = new THREE.Vector3();
+// ADR-013: dragging the scene only moves the camera; aiming is done with the panel stick.
 // Bound to the canvas, not #view, so overlays (e.g. the win card) keep their own clicks.
 const input = new ViewInput(canvas, {
-  aimAnchor: () => {
-    if (game.phase !== 'aiming' || rig.mode !== 'orbit') return null;
-    ballScreen.copy(game.ball.pos).project(view.camera);
-    const w = canvas.clientWidth;
-    return { x: ((ballScreen.x + 1) / 2) * w, y: ((1 - ballScreen.y) / 2) * w };
-  },
-  // Slingshot (ADR-007 / SHOT-2): pull away from the ball; the ball launches the opposite way.
-  onAim: (dx, dy) => {
-    const len = Math.hypot(dx, dy);
-    shot.power = Math.min(1, len / (config.aim.fullPowerDrag * canvas.clientWidth));
-    if (len > 8) shot.azimuth = rig.facingAzimuth() + Math.atan2(-dx, dy);
-  },
-  onAimEnd: () => {},
   rotate: (dx, dy) => rig.rotate(dx, dy),
   zoom: (f) => rig.zoom(f),
-  grabRadius: () => config.aim.grabRadius * canvas.clientWidth,
 });
 
 // --- Layout (UI-1/UI-2): largest square that leaves room for the panel ---------------
@@ -222,11 +205,21 @@ function frame(now: number): void {
   }
   lastPhase = game.phase;
 
-  // Hold-to-repeat direction buttons: tap = 1°, hold = continuous turn.
-  if (azLeft.held || azRight.held) {
-    azHoldTime += dt;
-    if (azHoldTime > 0.35) shot.azimuth += (azRight.held ? 1 : -1) * 40 * DEG * dt;
-  } else azHoldTime = 0;
+  // ADR-013 (SHOT-1): the direction stick and arrow keys rate-control azimuth and elevation.
+  if (rig.mode === 'orbit') {
+    const ka = input.keyboardAim();
+    const kd = config.aim.keyboardDeflection;
+    stepAim(
+      shot,
+      {
+        // Screen y grows downward, so pushing the stick up (y < 0) raises the elevation.
+        right: THREE.MathUtils.clamp(aimStick.x + ka.right * kd, -1, 1),
+        up: THREE.MathUtils.clamp(-aimStick.y + ka.up * kd, -1, 1),
+      },
+      dt,
+      config.aim,
+    );
+  }
 
   const km = input.keyboardMove();
   rig.update(dt, game.ball.pos, {

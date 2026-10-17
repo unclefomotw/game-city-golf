@@ -64,10 +64,17 @@ export const config = {
     speed: 9,
   },
   aim: {
-    /** Screen drag (fraction of view size) that equals full power. */
-    fullPowerDrag: 0.4,
-    /** Pointer-down within this fraction of view size from the ball starts aiming. */
-    grabRadius: 0.12,
+    // ADR-013: the direction joystick rate-controls the angles (SHOT-1).
+    /** Horizontal turn rate at full stick deflection, deg/s. */
+    azimuthRateDeg: 90,
+    /** Elevation change rate at full stick deflection, deg/s. */
+    elevationRateDeg: 60,
+    /** Stick deflection (0..1) ignored around the centre. */
+    stickDeadZone: 0.08,
+    /** Response curve exponent: 1 = linear, larger = finer control near the centre. */
+    stickExponent: 2,
+    /** Deflection that an arrow key counts as (desktop). */
+    keyboardDeflection: 0.6,
     minElevationDeg: -45,
     maxElevationDeg: 89,
     defaultElevationDeg: 30,

@@ -78,6 +78,17 @@ export const config = {
      */
     levelBallScreenOffset: 0.45,
   },
+  /** CAM-3, ADR-022: see-through cone (tip at the ball, base at the camera) when nothing else can see the ball. */
+  cutaway: {
+    /** Cone radius at the camera in cells, narrowing to 0 at the ball; the outer 30% fades out. */
+    radius: 4,
+    /** Only cut what is at least this much horizontally nearer to the camera than the ball. */
+    margin: 0.5,
+    /** Fraction of building pixels removed along the middle of the cone. */
+    amount: 0.75,
+    /** How fast it fades in and out, per second. */
+    fadeRate: 8,
+  },
   debris: {
     maxParticles: 700,
     lifetime: 1.4,

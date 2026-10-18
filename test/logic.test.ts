@@ -10,6 +10,7 @@ import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, type SimEvent, step, type World } from '../src/physics/ballSim';
 import { CameraRig, orbitBallScreenY } from '../src/render/cameraRig';
+import { coneHitsSolid, cutawayWeight, stepCutawayStrength } from '../src/render/cutaway';
 import {
   COVERAGE,
   DEFAULT_LEVEL_OPTIONS,
@@ -477,6 +478,70 @@ describe('orbit camera framing (ADR-017)', () => {
     expect(orbitBallScreenY(-0.2, level)).toBeCloseTo(-level);
     expect(orbitBallScreenY(0.3, level)).toBeLessThan(orbitBallScreenY(0.8, level));
     expect(orbitBallScreenY(Math.PI / 2, level)).toBeCloseTo(0);
+  });
+});
+
+describe('camera cutaway (CAM-3, ADR-022)', () => {
+  it('only cuts what lies between the camera and the ball, never beside or past it', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const { radius, margin } = config.cutaway;
+    // Camera behind (+z) and above the ball, as in orbit mode, at several pitches.
+    for (const pitch of [0.1, 0.35, 0.8, 1.2, 1.45]) {
+      const cam = new Vector3(50, 0.3 + 14 * Math.sin(pitch), 50 + 14 * Math.cos(pitch));
+      expect(cutawayWeight(cam.clone().lerp(ball, 0.5), cam, ball, radius, margin)).toBe(1);
+      for (let x = -4; x <= 4; x += 0.5)
+        for (let y = 0; y <= 6; y += 0.5)
+          for (let z = -4; z <= 0; z += 0.5) {
+            // z <= 0: level with or past the ball in the facing direction.
+            const p = new Vector3(ball.x + x, y, ball.z + z);
+            expect(cutawayWeight(p, cam, ball, radius, margin)).toBe(0);
+          }
+    }
+  });
+
+  it('is a cone: wide near the camera, narrow near the ball', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const cam = new Vector3(50, 0.3, 64);
+    const { radius, margin } = config.cutaway;
+    // Same sideways offset, near the camera vs. near the ball.
+    expect(cutawayWeight(new Vector3(52, 0.3, 62), cam, ball, radius, margin)).toBe(1);
+    expect(cutawayWeight(new Vector3(52, 0.3, 52), cam, ball, radius, margin)).toBe(0);
+    expect(cutawayWeight(new Vector3(50, 0.3, 52), cam, ball, radius, margin)).toBe(1);
+  });
+
+  it('detects buildings in the cone, but not beside or past the ball (ADR-022)', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const cam = new Vector3(50, 6, 63);
+    const { radius, margin } = config.cutaway;
+    const cell = (x: number, y: number, z: number) => (p: Vector3) =>
+      Math.floor(p.x) === x && Math.floor(p.y) === y && Math.floor(p.z) === z;
+    expect(coneHitsSolid(cam, ball, radius, margin, () => false)).toBe(false);
+    // One cell on the axis, halfway.
+    expect(coneHitsSolid(cam, ball, radius, margin, cell(50, 3, 56))).toBe(true);
+    // One cell near the camera, off the axis but inside the wide end.
+    expect(coneHitsSolid(cam, ball, radius, margin, cell(53, 6, 62))).toBe(true);
+    // Walls beside and past the ball are ignored.
+    expect(coneHitsSolid(cam, ball, radius, margin, (p) => p.z < 50.2)).toBe(false);
+    // Anything the cone check finds is something the shader would actually thin.
+    const hits: Vector3[] = [];
+    coneHitsSolid(cam, ball, radius, margin, (p) => {
+      hits.push(p.clone());
+      return false;
+    });
+    for (const p of hits) expect(cutawayWeight(p, cam, ball, radius, margin)).toBeGreaterThan(0);
+  });
+
+  it('fades in and out, then snaps to exactly 0 or 1', () => {
+    let s = 0;
+    s = stepCutawayStrength(s, true, 1 / 60, 8);
+    expect(s).toBeGreaterThan(0);
+    expect(s).toBeLessThan(1);
+    for (let i = 0; i < 120; i++) s = stepCutawayStrength(s, true, 1 / 60, 8);
+    expect(s).toBe(1);
+    for (let i = 0; i < 120; i++) s = stepCutawayStrength(s, false, 1 / 60, 8);
+    expect(s).toBe(0);
+    // A negative frame time must not push it out of range.
+    expect(stepCutawayStrength(0.5, true, -1, 8)).toBe(0.5);
   });
 });
 

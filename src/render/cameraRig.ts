@@ -116,7 +116,7 @@ export class CameraRig {
       // If a building blocks the view, tilt up until the ball is visible
       // over the rooftops instead of zooming in onto the ball.
       // If no angle is clear (e.g. the ball is in a tunnel), stay at the normal
-      // distance and rely on the X-ray ball and aim visuals.
+      // distance and rely on the X-ray ball, aim visuals and the cutaway (CAM-3).
       const enough = Math.min(this.distance, 6);
       let wantPitch: number | null = null;
       for (let p = this.pitch; p <= 1.45 && wantPitch === null; p += 0.08) {

@@ -78,9 +78,36 @@ function buildMaterials(opts: LevelOptions): Level {
   return { seed: 0, grid, buildings, ground, start, goal };
 }
 
+/**
+ * The tee sits at the dead end of a tunnel through one big brick block (CAM-3, ADR-022):
+ * no orbit angle can see the ball, so the camera cutaway shows. The tunnel opens
+ * toward the goal.
+ */
+function buildTunnel(opts: LevelOptions): Level {
+  const { sizeX, sizeY, sizeZ, ballRadius } = opts;
+  const grid = new VoxelGrid(sizeX, sizeY, sizeZ);
+  const ground = new Uint8Array(sizeX * sizeZ).fill(GROUND_ROAD);
+  const center = Math.floor(sizeX / 2);
+  const start = { x: center + 0.5, y: ballRadius, z: 40.5 };
+  const goal = { x: center + 0.5, z: 8.5, radius: 3 };
+  const buildings: Building[] = [{ id: 0, material: 'brick', color: MATERIAL_PALETTES.brick[0] }];
+  for (let x = center - 12; x < center + 12; x++)
+    for (let y = 0; y < 14; y++)
+      for (let z = 20; z < 44; z++) {
+        // Tunnel 3 wide and 3 high from the north face to just past the tee.
+        const inTunnel = Math.abs(x - center) <= 1 && y < 3 && z <= 41;
+        if (!inTunnel) grid.set(x, y, z, 1);
+      }
+  for (let z = 0; z < sizeZ; z++)
+    for (let x = 0; x < sizeX; x++)
+      if (Math.hypot(x + 0.5 - goal.x, z + 0.5 - goal.z) < goal.radius + 1) ground[x + z * sizeX] = GROUND_PLAZA;
+  return { seed: 0, grid, buildings, ground, start, goal };
+}
+
 export const TEST_SCENES: readonly TestScene[] = [
   { id: 'empty', label: '空地（測距離）', build: buildEmpty },
   { id: 'materials', label: '材質牆', build: buildMaterials },
+  { id: 'tunnel', label: '隧道（透視通道）', build: buildTunnel },
 ];
 
 export function findTestScene(id: string | null | undefined): TestScene | null {

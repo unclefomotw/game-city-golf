@@ -1,5 +1,5 @@
 // CAM-3, ADR-022: when no orbit angle can see the ball, building fragments inside a
-// cylinder from the camera to the ball are thinned out with an ordered dither
+// cone with its tip at the ball and its base at the camera are thinned out with an ordered dither
 // (screen-door transparency), so the ball and the way ahead show through.
 // Only fragments horizontally nearer to the camera than the ball are cut, so
 // nothing beside or past the ball (the way the shot goes) is ever thinned.
@@ -38,7 +38,8 @@ export function cutawayWeight(
   const pastBall = ((p.x - ball.x) * seg.x + (p.z - ball.z) * seg.z) / flatLen;
   if (h <= 0 || pastBall >= -margin) return 0;
   const d = p.clone().sub(camera).sub(seg.multiplyScalar(h)).length();
-  return THREE.MathUtils.smoothstep(-d, -radius, -radius * 0.7);
+  const r = radius * Math.max(1 - h, 0);
+  return THREE.MathUtils.smoothstep(-d, -r, -r * 0.7);
 }
 
 export class Cutaway {
@@ -47,10 +48,11 @@ export class Cutaway {
   private readonly uniforms = {
     cutStart: { value: new THREE.Vector3() },
     cutEnd: { value: new THREE.Vector3() },
+    /** Cone radius at the camera; it narrows to 0 at the ball. */
     cutRadius: { value: 1 },
     /** How much horizontally nearer to the camera than the ball a fragment must be. */
     cutMargin: { value: 0 },
-    /** Fraction of fragments removed in the middle of the cylinder. */
+    /** Fraction of fragments removed along the middle of the cone. */
     cutAmount: { value: 0 },
   };
 
@@ -97,7 +99,8 @@ export class Cutaway {
             float pastBall = dot(vCutWorld.xz - cutEnd.xz, cutFlat);
             if (h > 0.0 && pastBall < -cutMargin) {
               float d = length(vCutWorld - cutStart - seg * h);
-              float amount = cutAmount * smoothstep(cutRadius, cutRadius * 0.7, d);
+              float r = cutRadius * max(1.0 - h, 0.0);
+              float amount = cutAmount * smoothstep(r, r * 0.7, d);
               if (cutBayer4(gl_FragCoord.xy) < amount) discard;
             }
           }`,

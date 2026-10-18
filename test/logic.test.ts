@@ -543,6 +543,16 @@ describe('camera cutaway (CAM-3, ADR-022)', () => {
     }
   });
 
+  it('is a cone: wide near the camera, narrow near the ball', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const cam = new Vector3(50, 0.3, 64);
+    const { radius, margin } = config.cutaway;
+    // Same sideways offset, near the camera vs. near the ball.
+    expect(cutawayWeight(new Vector3(52, 0.3, 62), cam, ball, radius, margin)).toBe(1);
+    expect(cutawayWeight(new Vector3(52, 0.3, 52), cam, ball, radius, margin)).toBe(0);
+    expect(cutawayWeight(new Vector3(50, 0.3, 52), cam, ball, radius, margin)).toBe(1);
+  });
+
   it('fades in and out, then snaps to exactly 0 or 1', () => {
     let s = 0;
     s = stepCutawayStrength(s, true, 1 / 60, 8);

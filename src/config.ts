@@ -20,9 +20,9 @@ export const config = {
     /** Launch speed at full power. */
     maxLaunchSpeed: 42,
     /** Restitution (bounciness) per non-building surface; buildings use `materials`. */
-    restitution: { ground: 0.45, boundary: 0.6 },
+    restitution: { ground: 0.45, boundary: 0.08 },
     /** Fraction of tangential speed kept on each bounce. */
-    bounceFriction: { ground: 0.82, boundary: 0.85 },
+    bounceFriction: { ground: 0.82, boundary: 0.6 },
     /** How strongly spin converts into tangential speed on contact. */
     contactSpinK: 2,
     /** Fraction of spin kept after a contact. */

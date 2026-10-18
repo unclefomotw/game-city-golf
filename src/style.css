@@ -71,7 +71,7 @@ body {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr) auto;
+  grid-template-columns: repeat(2, 1fr) auto;
   gap: 8px;
 }
 
@@ -270,10 +270,24 @@ input[type="range"] {
   flex: 1;
 }
 
+/* Penalty takes the first row; new map and the current map code (LVL-2)
+   share the second row. */
 .actions {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  align-items: center;
+}
+
+#penalty {
+  grid-column: 1 / -1;
+}
+
+#seed {
+  font-size: 13px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
 }
 
 button {

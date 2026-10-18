@@ -120,7 +120,7 @@ $('new-map').addEventListener('click', newMap);
 $('win-new').addEventListener('click', newMap);
 $('replay').addEventListener('click', () => location.reload());
 $('mute').addEventListener('click', () => sound.setMuted(!sound.muted));
-$('seed').textContent = testScene ? testScene.label : String(seed);
+$('seed').textContent = `目前 ${testScene ? testScene.label : `#${seed}`}`;
 if (import.meta.env.DEV) addScenePicker();
 
 /** ADR-010: dev-only picker; choosing a scene reloads with ?scene=<id>. */

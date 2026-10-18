@@ -75,6 +75,8 @@ export function createTuningPanel(cfg: Config): void {
   c.add(cfg.camera, 'freeSpeed', 2, 60, 1);
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);
   c.add(cfg.camera, 'levelBallScreenOffset', 0, 0.9, 0.01).name('平視時球的下移量');
+  c.add(cfg.camera, 'autoTiltMaxPitch', 0, 1.55, 0.01).name('避擋自動抬頭上限 rad');
+  c.add(cfg.camera, 'autoTiltClearDistance', 0.5, 30, 0.5).name('避擋需淨空距離');
   c.add(cfg.cutaway, 'radius', 0.5, 10, 0.1).name('透視通道相機端半徑');
   c.add(cfg.cutaway, 'margin', 0, 3, 0.1).name('透視通道離球的距離');
   c.add(cfg.cutaway, 'amount', 0, 1, 0.05).name('透視通道鏤空比例');

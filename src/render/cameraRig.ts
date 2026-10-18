@@ -117,9 +117,9 @@ export class CameraRig {
       // over the rooftops instead of zooming in onto the ball.
       // If no angle is clear (e.g. the ball is in a tunnel), stay at the normal
       // distance and rely on the X-ray ball, aim visuals and the cutaway (CAM-3).
-      const enough = Math.min(this.distance, 6);
+      const enough = Math.min(this.distance, this.cfg.camera.autoTiltClearDistance);
       let wantPitch: number | null = null;
-      for (let p = this.pitch; p <= 1.45 && wantPitch === null; p += 0.08) {
+      for (let p = this.pitch; p <= this.cfg.camera.autoTiltMaxPitch && wantPitch === null; p += 0.08) {
         if (this.clearDistance(p) >= enough) wantPitch = p;
       }
       this.viewPitch += ((wantPitch ?? this.pitch) - this.viewPitch) * (1 - Math.exp(-6 * dt));

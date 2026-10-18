@@ -77,6 +77,10 @@ export const config = {
      * as a fraction of the half view height. Fades to center at top-down (ADR-017).
      */
     levelBallScreenOffset: 0.45,
+    /** Orbit mode: highest pitch (rad) the camera may tilt up to so the ball shows over the rooftops. */
+    autoTiltMaxPitch: 1.1,
+    /** Orbit mode: a pitch counts as clear when this much of the line from the ball to the camera is free (capped at the orbit distance). */
+    autoTiltClearDistance: 8,
   },
   /** CAM-3, ADR-022: see-through cone (tip at the ball, base at the camera) when nothing else can see the ball. */
   cutaway: {

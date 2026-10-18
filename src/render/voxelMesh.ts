@@ -1,11 +1,13 @@
 // Renders the building grid as one InstancedMesh per material (ADR-003, ADR-019).
 // Only cells with at least one empty neighbour are drawn; the meshes are
 // rebuilt whenever the grid's version changes (DES-2: destruction persists).
+// Each mesh also has a dithered material for the camera cutaway (CAM-3, ADR-022).
 
 import * as THREE from 'three';
 import type { Building } from '../world/levelGen';
 import { MATERIALS, type MaterialKind, type MaterialOf, materialLookup } from '../world/materials';
 import type { VoxelGrid } from '../world/voxelGrid';
+import type { Cutaway } from './cutaway';
 import { createMaterialMeshMaterials } from './materialTextures';
 
 const NEIGHBOURS = [
@@ -40,6 +42,8 @@ for (let a = 0; a < 4; a++)
 export class VoxelMesh {
   readonly group = new THREE.Group();
   private readonly meshes = {} as Record<MaterialKind, THREE.InstancedMesh>;
+  private readonly plain = {} as Record<MaterialKind, THREE.Material>;
+  private readonly cut = {} as Record<MaterialKind, THREE.Material>;
   private readonly materialOf: MaterialOf;
   private readonly colors: THREE.Color[];
   private builtVersion = -1;
@@ -47,6 +51,7 @@ export class VoxelMesh {
   constructor(
     private readonly grid: VoxelGrid,
     buildings: Building[],
+    cutaway: Cutaway,
   ) {
     this.materialOf = materialLookup(buildings);
     this.colors = buildings.map((b) => new THREE.Color(b.color));
@@ -57,6 +62,8 @@ export class VoxelMesh {
     const box = new THREE.BoxGeometry(1, 1, 1);
     for (const kind of MATERIALS) {
       const cap = Math.max(1, capacity[kind]);
+      this.plain[kind] = materials[kind];
+      this.cut[kind] = cutaway.patch(materials[kind]);
       const mesh = new THREE.InstancedMesh(box, materials[kind], cap);
       mesh.castShadow = true;
       mesh.receiveShadow = true;
@@ -66,6 +73,11 @@ export class VoxelMesh {
       this.group.add(mesh);
     }
     this.update();
+  }
+
+  /** CAM-3: swaps between the plain and the dithered materials. */
+  useCutaway(on: boolean): void {
+    for (const kind of MATERIALS) this.meshes[kind].material = on ? this.cut[kind] : this.plain[kind];
   }
 
   /** Cheap integer hash for per-cell shade variation. */

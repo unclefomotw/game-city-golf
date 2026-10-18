@@ -29,6 +29,8 @@ export class CameraRig {
   private freeYaw = 0;
   private freePitch = 0;
   private shakeAmount = 0;
+  /** CAM-3: orbit mode and no pitch can see the ball over the buildings. */
+  occluded = false;
   /** Pitch actually used, raised above `pitch` when buildings block the view. */
   private viewPitch = 0.35;
 
@@ -116,12 +118,13 @@ export class CameraRig {
       // If a building blocks the view, tilt up until the ball is visible
       // over the rooftops instead of zooming in onto the ball.
       // If no angle is clear (e.g. the ball is in a tunnel), stay at the normal
-      // distance and rely on the X-ray ball and aim visuals.
+      // distance and rely on the X-ray ball, aim visuals and the cutaway (CAM-3).
       const enough = Math.min(this.distance, 6);
       let wantPitch: number | null = null;
       for (let p = this.pitch; p <= 1.45 && wantPitch === null; p += 0.08) {
         if (this.clearDistance(p) >= enough) wantPitch = p;
       }
+      this.occluded = wantPitch === null;
       this.viewPitch += ((wantPitch ?? this.pitch) - this.viewPitch) * (1 - Math.exp(-6 * dt));
       const clear = this.clearDistance(this.viewPitch);
       const dist = wantPitch === null ? this.distance : clear;
@@ -132,6 +135,7 @@ export class CameraRig {
       const ndcY = orbitBallScreenY(this.viewPitch, this.cfg.camera.levelBallScreenOffset);
       cam.rotateX(Math.atan(-ndcY * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2)));
     } else {
+      this.occluded = false;
       const c = this.cfg.camera;
       const speed = c.freeSpeed * (move.fast ? c.freeFastMultiplier : 1) * dt;
       // Forward follows the view, pitch included, so looking down and moving

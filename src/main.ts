@@ -13,6 +13,7 @@ import { ViewInput } from './input/viewInput';
 import { previewPath, type ShotInput } from './physics/ballSim';
 import { AimVisuals } from './render/aimVisuals';
 import { CameraRig } from './render/cameraRig';
+import { Cutaway } from './render/cutaway';
 import { Debris } from './render/debris';
 import { SceneView } from './render/sceneView';
 import { VoxelMesh } from './render/voxelMesh';
@@ -46,7 +47,8 @@ const previewWorld = () => ({ solids: new PreviewOverlay(level.grid), materialOf
 const viewEl = $('view');
 const canvas = $<HTMLCanvasElement>('canvas');
 const view = new SceneView(canvas, level, config);
-const voxels = new VoxelMesh(level.grid, level.buildings);
+const cutaway = new Cutaway();
+const voxels = new VoxelMesh(level.grid, level.buildings, cutaway);
 const debris = new Debris(config);
 const aimVisuals = new AimVisuals();
 view.scene.add(voxels.group, debris.mesh, aimVisuals.group);
@@ -54,6 +56,10 @@ const { sizeX, sizeY, sizeZ } = level.grid;
 const rig = new CameraRig(view.camera, config, new THREE.Vector3(sizeX, sizeY, sizeZ), (p) =>
   level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)),
 );
+// ADR-022: compile the dithered building shaders up front so the first cutaway doesn't stall.
+voxels.useCutaway(true);
+view.renderer.compile(view.scene, view.camera);
+voxels.useCutaway(false);
 
 // --- Sound (AUD-1 ~ AUD-9, ADR-021) -----------------------------------------------
 const sound = new SoundPlayer(config);
@@ -251,6 +257,8 @@ function frame(now: number): void {
     sound.play(cue, cueGain(cue, listenDistance, config.audio));
 
   voxels.update();
+  // CAM-3: thin out the buildings between the camera and the ball when no angle can see it.
+  voxels.useCutaway(cutaway.update(dt, rig.occluded, view.camera.position, game.ball.pos, config.cutaway));
   debris.update(dt);
   view.ball.position.copy(game.ball.pos);
 

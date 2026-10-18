@@ -78,6 +78,15 @@ export const config = {
      */
     levelBallScreenOffset: 0.45,
   },
+  /** CAM-3, ADR-022: see-through cylinder from the camera to the ball when nothing else can see it. */
+  cutaway: {
+    /** Cylinder radius in cells; the outer 30% fades out. */
+    radius: 2.5,
+    /** Fraction of building pixels removed in the middle of the cylinder. */
+    amount: 0.75,
+    /** How fast it fades in and out, per second. */
+    fadeRate: 8,
+  },
   debris: {
     maxParticles: 700,
     lifetime: 1.4,

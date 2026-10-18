@@ -258,8 +258,9 @@ function frame(now: number): void {
     sound.play(cue, cueGain(cue, listenDistance, config.audio));
 
   voxels.update();
-  // CAM-3: thin out the buildings between the camera and the ball when no angle can see it.
-  voxels.useCutaway(cutaway.update(dt, rig.occluded, view.camera.position, game.ball.pos, config.cutaway));
+  // CAM-3: in orbit mode, always thin out the buildings between the camera and the ball.
+  const cutawayOn = rig.mode === 'orbit';
+  voxels.useCutaway(cutaway.update(dt, cutawayOn, view.camera.position, game.ball.pos, config.cutaway));
   debris.update(dt);
   view.ball.position.copy(game.ball.pos);
 

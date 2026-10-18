@@ -1,4 +1,4 @@
-// CAM-3, ADR-022: when no orbit angle can see the ball, building fragments inside a
+// CAM-3, ADR-022: in orbit mode, building fragments inside a
 // cone with its tip at the ball and its base at the camera are thinned out with an ordered dither
 // (screen-door transparency), so the ball and the way ahead show through.
 // Only fragments horizontally nearer to the camera than the ball are cut, so

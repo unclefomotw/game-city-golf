@@ -482,50 +482,6 @@ describe('orbit camera framing (ADR-017)', () => {
 });
 
 describe('camera cutaway (CAM-3, ADR-022)', () => {
-  const still = { forward: 0, right: 0, up: 0, fast: false };
-  function orbitRig(isBlocked: (p: Vector3) => boolean) {
-    const cam = new PerspectiveCamera(config.camera.fov, 1, 0.1, 400);
-    const rig = new CameraRig(cam, config, new Vector3(100, 40, 100), isBlocked);
-    const ball = new Vector3(50, 0.3, 50);
-    rig.lookAlong(ball, 0);
-    for (let i = 0; i < 5; i++) rig.update(10, ball, still);
-    return rig;
-  }
-
-  it('is off when the camera can see the ball', () => {
-    expect(orbitRig(() => false).occluded).toBe(false);
-  });
-
-  it('is off when tilting up clears a low wall', () => {
-    const wall = (p: Vector3) => p.z > 52 && p.z < 54 && p.y < 3;
-    expect(orbitRig(wall).occluded).toBe(false);
-  });
-
-  it('turns on when no angle can see the ball', () => {
-    // Ball in a dead-end tunnel: solid everywhere except a small room around it.
-    const tunnel = (p: Vector3) => p.distanceTo(new Vector3(50, 0.3, 50)) > 1.5 && p.y < 30;
-    expect(orbitRig(tunnel).occluded).toBe(true);
-  });
-
-  it('is off in free mode', () => {
-    const rig = orbitRig((p) => p.distanceTo(new Vector3(50, 0.3, 50)) > 1.5 && p.y < 30);
-    rig.enterFree();
-    rig.update(0.1, new Vector3(50, 0.3, 50), still);
-    expect(rig.occluded).toBe(false);
-  });
-
-  it('the tunnel test scene hides the ball from every orbit angle', () => {
-    const level = findTestScene('tunnel')!.build(DEFAULT_LEVEL_OPTIONS);
-    const ball = new Vector3(level.start.x, level.start.y, level.start.z);
-    const cam = new PerspectiveCamera(config.camera.fov, 1, 0.1, 400);
-    const rig = new CameraRig(cam, config, new Vector3(100, 40, 100), (p) =>
-      level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)),
-    );
-    rig.lookAlong(ball, Math.atan2(level.goal.x - ball.x, -(level.goal.z - ball.z)));
-    for (let i = 0; i < 5; i++) rig.update(10, ball, still);
-    expect(rig.occluded).toBe(true);
-  });
-
   it('only cuts what lies between the camera and the ball, never beside or past it', () => {
     const ball = new Vector3(50, 0.3, 50);
     const { radius, margin } = config.cutaway;

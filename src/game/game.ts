@@ -1,4 +1,4 @@
-// Round/stroke state machine (PLAY-1, PLAY-4 ~ PLAY-6). Pure logic.
+// Round/stroke state machine (PLAY-1, PLAY-4 ~ PLAY-6) and the destruction-score wallet (DES-7, CAM-4). Pure logic.
 
 import { Vector3 } from 'three';
 import type { Config } from '../config';
@@ -12,7 +12,10 @@ export type Phase = 'aiming' | 'flying' | 'finished';
 export class Game {
   phase: Phase = 'aiming';
   strokes = 0;
+  /** DES-7/CAM-4: earned by destruction, spent on free camera; never negative. */
   destructionScore = 0;
+  /** CAM-4: how many times the player has entered free camera this round. */
+  soulUses = 0;
   ball: BallState;
   /** Where the current/last stroke was played from (PLAY-5). */
   private lastShotPos: Vector3;
@@ -48,6 +51,23 @@ export class Game {
     this.strokes++;
     this.ball = this.restingBall(this.lastShotPos);
     this.phase = 'aiming';
+  }
+
+  /** CAM-4: the first use is free, then 50, 100, 150, ... */
+  get soulCost(): number {
+    return this.soulUses * this.cfg.soul.costPerUse;
+  }
+
+  canAffordSoul(): boolean {
+    return this.destructionScore >= this.soulCost;
+  }
+
+  /** CAM-4: pays for one free-camera use; returns false (and charges nothing) if the score is short. */
+  spendSoul(): boolean {
+    if (!this.canAffordSoul()) return false;
+    this.destructionScore -= this.soulCost;
+    this.soulUses++;
+    return true;
   }
 
   /** Advances the simulation by real elapsed time using fixed steps. */

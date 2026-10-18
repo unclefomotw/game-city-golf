@@ -108,8 +108,8 @@ $('penalty').addEventListener('click', () => {
   toast('罰桿 +1');
 });
 $('ghost').addEventListener('click', () => {
-  if (rig.mode === 'orbit') rig.enterFree();
-  else rig.returnToBall();
+  if (rig.mode === 'free') rig.returnToBall();
+  else if (game.spendSoul()) rig.enterFree();
 });
 const newMap = () => {
   params.delete('scene');
@@ -169,7 +169,9 @@ function syncPanel(phase: Phase): void {
   $('fire').hidden = free;
   $<HTMLButtonElement>('fire').disabled = phase !== 'aiming';
   $<HTMLButtonElement>('penalty').disabled = phase === 'finished' || game.strokes === 0;
-  $('ghost').textContent = free ? '回到球' : '靈魂出竅';
+  // CAM-4: show the next use's cost; the button is unusable while the score can't cover it.
+  $('ghost').textContent = free ? '回到球' : `靈魂出竅 (${game.soulCost})`;
+  $<HTMLButtonElement>('ghost').disabled = !free && !game.canAffordSoul();
   $('mute').classList.toggle('muted', sound.muted);
   $('mute').title = sound.muted ? '開啟音效' : '靜音';
   $('strokes').textContent = String(game.strokes);

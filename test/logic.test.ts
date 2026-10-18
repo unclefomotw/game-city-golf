@@ -421,6 +421,26 @@ describe('game flow', () => {
   });
 });
 
+describe('free camera cost (CAM-4)', () => {
+  it('costs uses x 50 from the destruction score and never goes negative', () => {
+    const game = new Game(generateLevel(7), config);
+    expect(game.soulCost).toBe(0);
+    expect(game.spendSoul()).toBe(true);
+    expect(game.soulCost).toBe(50);
+    game.destructionScore = 49;
+    expect(game.canAffordSoul()).toBe(false);
+    expect(game.spendSoul()).toBe(false);
+    expect(game.destructionScore).toBe(49);
+    expect(game.soulUses).toBe(1);
+    game.destructionScore = 120;
+    expect(game.spendSoul()).toBe(true);
+    expect(game.destructionScore).toBe(70);
+    expect(game.soulCost).toBe(100);
+    expect(game.spendSoul()).toBe(false);
+    expect(game.destructionScore).toBe(70);
+  });
+});
+
 describe('free camera (CAM-1, ADR-011)', () => {
   const still = { forward: 0, right: 0, up: 0, fast: false };
   function freeRig(lookDownPx: number) {

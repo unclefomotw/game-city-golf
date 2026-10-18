@@ -137,6 +137,10 @@ export const config = {
     maxElevationDeg: 89,
     defaultElevationDeg: 30,
   },
+  soul: {
+    /** CAM-4: entering free camera costs (times already used) x this, paid from the destruction score. */
+    costPerUse: 50,
+  },
 };
 
 export type Config = typeof config;

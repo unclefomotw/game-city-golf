@@ -10,7 +10,7 @@ import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, type SimEvent, step, type World } from '../src/physics/ballSim';
 import { CameraRig, orbitBallScreenY } from '../src/render/cameraRig';
-import { cutawayWeight, stepCutawayStrength } from '../src/render/cutaway';
+import { coneHitsSolid, cutawayWeight, stepCutawayStrength } from '../src/render/cutaway';
 import {
   COVERAGE,
   DEFAULT_LEVEL_OPTIONS,
@@ -507,6 +507,28 @@ describe('camera cutaway (CAM-3, ADR-022)', () => {
     expect(cutawayWeight(new Vector3(52, 0.3, 62), cam, ball, radius, margin)).toBe(1);
     expect(cutawayWeight(new Vector3(52, 0.3, 52), cam, ball, radius, margin)).toBe(0);
     expect(cutawayWeight(new Vector3(50, 0.3, 52), cam, ball, radius, margin)).toBe(1);
+  });
+
+  it('detects buildings in the cone, but not beside or past the ball (ADR-022)', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const cam = new Vector3(50, 6, 63);
+    const { radius, margin } = config.cutaway;
+    const cell = (x: number, y: number, z: number) => (p: Vector3) =>
+      Math.floor(p.x) === x && Math.floor(p.y) === y && Math.floor(p.z) === z;
+    expect(coneHitsSolid(cam, ball, radius, margin, () => false)).toBe(false);
+    // One cell on the axis, halfway.
+    expect(coneHitsSolid(cam, ball, radius, margin, cell(50, 3, 56))).toBe(true);
+    // One cell near the camera, off the axis but inside the wide end.
+    expect(coneHitsSolid(cam, ball, radius, margin, cell(53, 6, 62))).toBe(true);
+    // Walls beside and past the ball are ignored.
+    expect(coneHitsSolid(cam, ball, radius, margin, (p) => p.z < 50.2)).toBe(false);
+    // Anything the cone check finds is something the shader would actually thin.
+    const hits: Vector3[] = [];
+    coneHitsSolid(cam, ball, radius, margin, (p) => {
+      hits.push(p.clone());
+      return false;
+    });
+    for (const p of hits) expect(cutawayWeight(p, cam, ball, radius, margin)).toBeGreaterThan(0);
   });
 
   it('fades in and out, then snaps to exactly 0 or 1', () => {

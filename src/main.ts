@@ -13,7 +13,7 @@ import { ViewInput } from './input/viewInput';
 import { previewPath, type ShotInput } from './physics/ballSim';
 import { AimVisuals } from './render/aimVisuals';
 import { CameraRig } from './render/cameraRig';
-import { Cutaway } from './render/cutaway';
+import { Cutaway, coneHitsSolid } from './render/cutaway';
 import { Debris } from './render/debris';
 import { SceneView } from './render/sceneView';
 import { VoxelMesh } from './render/voxelMesh';
@@ -53,9 +53,8 @@ const debris = new Debris(config);
 const aimVisuals = new AimVisuals();
 view.scene.add(voxels.group, debris.mesh, aimVisuals.group);
 const { sizeX, sizeY, sizeZ } = level.grid;
-const rig = new CameraRig(view.camera, config, new THREE.Vector3(sizeX, sizeY, sizeZ), (p) =>
-  level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z)),
-);
+const isSolidAt = (p: THREE.Vector3) => level.grid.isSolid(Math.floor(p.x), Math.floor(p.y), Math.floor(p.z));
+const rig = new CameraRig(view.camera, config, new THREE.Vector3(sizeX, sizeY, sizeZ), isSolidAt);
 // ADR-022: compile the dithered building shaders up front so the first cutaway doesn't stall.
 voxels.useCutaway(true);
 view.renderer.compile(view.scene, view.camera);
@@ -258,8 +257,11 @@ function frame(now: number): void {
     sound.play(cue, cueGain(cue, listenDistance, config.audio));
 
   voxels.update();
-  // CAM-3: in orbit mode, always thin out the buildings between the camera and the ball.
-  const cutawayOn = rig.mode === 'orbit';
+  // CAM-3: in orbit mode, thin out the buildings between the camera and the ball;
+  // the dithered materials are only swapped in while a building reaches into the cone (ADR-022).
+  const { radius, margin } = config.cutaway;
+  const cutawayOn =
+    rig.mode === 'orbit' && coneHitsSolid(view.camera.position, game.ball.pos, radius, margin, isSolidAt);
   voxels.useCutaway(cutaway.update(dt, cutawayOn, view.camera.position, game.ball.pos, config.cutaway));
   debris.update(dt);
   view.ball.position.copy(game.ball.pos);

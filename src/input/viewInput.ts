@@ -6,7 +6,7 @@
 // - two pointers: pinch to zoom (orbit) or move forward/back (free)
 // - mouse wheel: same as pinch
 // - WASD/QE/Shift: free-camera movement
-// - arrow keys: shot direction and elevation (ADR-013)
+// - arrow keys (and WASD in aim mode): shot direction and elevation (ADR-013)
 
 import type { MoveInput } from '../render/cameraRig';
 
@@ -53,10 +53,16 @@ export class ViewInput {
     };
   }
 
-  /** Arrow keys as a stick: right > 0 turns right, up > 0 raises elevation (ADR-013). */
+  /**
+   * Arrow keys or WASD as a stick: right > 0 turns right, up > 0 raises elevation (ADR-013).
+   * Only read in aim mode, so WASD does not clash with free-camera movement.
+   */
   keyboardAim(): { right: number; up: number } {
-    const k = (code: string) => (this.keys.has(code) ? 1 : 0);
-    return { right: k('ArrowRight') - k('ArrowLeft'), up: k('ArrowUp') - k('ArrowDown') };
+    const k = (...codes: string[]) => (codes.some((c) => this.keys.has(c)) ? 1 : 0);
+    return {
+      right: k('ArrowRight', 'KeyD') - k('ArrowLeft', 'KeyA'),
+      up: k('ArrowUp', 'KeyW') - k('ArrowDown', 'KeyS'),
+    };
   }
 
   private local(e: PointerEvent) {

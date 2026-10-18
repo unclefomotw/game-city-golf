@@ -144,7 +144,7 @@ const inputKind = trackInputKind();
 const HINTS: Record<InputKind, { free: string; aim: string }> = {
   mouse: {
     free: '靈魂出竅：WASD 移動（往視線方向前進）、Q/E 下降／上升、Shift 加速，拖曳畫面轉視角，滾輪拉近／拉遠。',
-    aim: '方向鍵或拖曳方向搖桿調整擊球方向：左右轉水平方向、上下調仰角，推越遠轉越快。設定力道與旋球後按「擊球」。拖曳畫面旋轉視角，滾輪拉近／拉遠。',
+    aim: '方向鍵、WASD 或拖曳方向搖桿調整擊球方向：左右轉水平方向、上下調仰角，推越遠轉越快。設定力道與旋球後按「擊球」。拖曳畫面旋轉視角，滾輪拉近／拉遠。',
   },
   touch: {
     free: '靈魂出竅：用搖桿移動（往視線方向前進）、升降按鈕上下，單指拖曳畫面轉視角，雙指捏合拉近／拉遠。',
@@ -227,7 +227,7 @@ function frame(now: number): void {
   }
   lastPhase = game.phase;
 
-  // ADR-013 (SHOT-1): the direction stick and arrow keys rate-control azimuth and elevation.
+  // ADR-013 (SHOT-1): the direction stick, arrow keys and WASD rate-control azimuth and elevation.
   if (rig.mode === 'orbit') {
     const ka = input.keyboardAim();
     const kd = config.aim.keyboardDeflection;

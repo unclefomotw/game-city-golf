@@ -15,7 +15,7 @@ export const config = {
     /** Spin decay rate per second while airborne. */
     spinDecay: 0.3,
     /** Spin magnitude (rad/s-ish) at full spin input. */
-    maxSpin: 6,
+    maxSpin: 9,
     ballRadius: 0.3,
     /** Launch speed at full power. */
     maxLaunchSpeed: 42,

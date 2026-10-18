@@ -10,7 +10,7 @@ import { clampElevation, stepAim, stickResponse } from '../src/input/aimStick';
 import { inputKindFromPointer } from '../src/input/inputKind';
 import { launch, previewPath, type ShotInput, type SimEvent, step, type World } from '../src/physics/ballSim';
 import { CameraRig, orbitBallScreenY } from '../src/render/cameraRig';
-import { stepCutawayStrength } from '../src/render/cutaway';
+import { cutawayWeight, stepCutawayStrength } from '../src/render/cutaway';
 import {
   COVERAGE,
   DEFAULT_LEVEL_OPTIONS,
@@ -526,6 +526,23 @@ describe('camera cutaway (CAM-3, ADR-022)', () => {
     expect(rig.occluded).toBe(true);
   });
 
+  it('only cuts what lies between the camera and the ball, never beside or past it', () => {
+    const ball = new Vector3(50, 0.3, 50);
+    const { radius, margin } = config.cutaway;
+    // Camera behind (+z) and above the ball, as in orbit mode, at several pitches.
+    for (const pitch of [0.1, 0.35, 0.8, 1.2, 1.45]) {
+      const cam = new Vector3(50, 0.3 + 14 * Math.sin(pitch), 50 + 14 * Math.cos(pitch));
+      expect(cutawayWeight(cam.clone().lerp(ball, 0.5), cam, ball, radius, margin)).toBe(1);
+      for (let x = -4; x <= 4; x += 0.5)
+        for (let y = 0; y <= 6; y += 0.5)
+          for (let z = -4; z <= 0; z += 0.5) {
+            // z <= 0: level with or past the ball in the facing direction.
+            const p = new Vector3(ball.x + x, y, ball.z + z);
+            expect(cutawayWeight(p, cam, ball, radius, margin)).toBe(0);
+          }
+    }
+  });
+
   it('fades in and out, then snaps to exactly 0 or 1', () => {
     let s = 0;
     s = stepCutawayStrength(s, true, 1 / 60, 8);
@@ -535,6 +552,8 @@ describe('camera cutaway (CAM-3, ADR-022)', () => {
     expect(s).toBe(1);
     for (let i = 0; i < 120; i++) s = stepCutawayStrength(s, false, 1 / 60, 8);
     expect(s).toBe(0);
+    // A negative frame time must not push it out of range.
+    expect(stepCutawayStrength(0.5, true, -1, 8)).toBe(0.5);
   });
 });
 

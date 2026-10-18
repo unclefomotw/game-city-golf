@@ -76,6 +76,7 @@ export function createTuningPanel(cfg: Config): void {
   c.add(cfg.camera, 'lookSensitivity', 0.001, 0.02, 0.0005);
   c.add(cfg.camera, 'levelBallScreenOffset', 0, 0.9, 0.01).name('平視時球的下移量');
   c.add(cfg.cutaway, 'radius', 0.5, 6, 0.1).name('透視通道半徑');
+  c.add(cfg.cutaway, 'margin', 0, 3, 0.1).name('透視通道離球的距離');
   c.add(cfg.cutaway, 'amount', 0, 1, 0.05).name('透視通道鏤空比例');
   c.add(cfg.cutaway, 'fadeRate', 1, 30, 0.5).name('透視通道淡入速度');
   c.close();

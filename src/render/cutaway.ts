@@ -1,6 +1,8 @@
 // CAM-3, ADR-022: when no orbit angle can see the ball, building fragments inside a
 // cylinder from the camera to the ball are thinned out with an ordered dither
 // (screen-door transparency), so the ball and the way ahead show through.
+// Only fragments horizontally nearer to the camera than the ball are cut, so
+// nothing beside or past the ball (the way the shot goes) is ever thinned.
 //
 // Buildings keep their plain materials while the cutaway is off; the dithered
 // copies are swapped in only while it is fading in or shown, because `discard`
@@ -14,9 +16,29 @@ export type CutawayOptions = Config['cutaway'];
 /** Moves `current` toward `target` (0 or 1) at `rate` per second, exponentially. */
 export function stepCutawayStrength(current: number, active: boolean, dt: number, rate: number): number {
   const target = active ? 1 : 0;
-  const next = current + (target - current) * (1 - Math.exp(-rate * dt));
+  const next = THREE.MathUtils.clamp(current + (target - current) * (1 - Math.exp(-rate * Math.max(dt, 0))), 0, 1);
   // Snap the tail so the plain materials come back instead of fading forever.
   return Math.abs(next - target) < 0.01 ? target : next;
+}
+
+/**
+ * How strongly a world point is thinned, 0..1 before `amount` and strength.
+ * Mirrors the fragment shader so the geometry can be tested.
+ */
+export function cutawayWeight(
+  p: THREE.Vector3,
+  camera: THREE.Vector3,
+  ball: THREE.Vector3,
+  radius: number,
+  margin: number,
+): number {
+  const seg = ball.clone().sub(camera);
+  const h = p.clone().sub(camera).dot(seg) / Math.max(seg.lengthSq(), 1e-4);
+  const flatLen = Math.max(Math.hypot(seg.x, seg.z), 1e-4);
+  const pastBall = ((p.x - ball.x) * seg.x + (p.z - ball.z) * seg.z) / flatLen;
+  if (h <= 0 || pastBall >= -margin) return 0;
+  const d = p.clone().sub(camera).sub(seg.multiplyScalar(h)).length();
+  return THREE.MathUtils.smoothstep(-d, -radius, -radius * 0.7);
 }
 
 export class Cutaway {
@@ -26,6 +48,8 @@ export class Cutaway {
     cutStart: { value: new THREE.Vector3() },
     cutEnd: { value: new THREE.Vector3() },
     cutRadius: { value: 1 },
+    /** How much horizontally nearer to the camera than the ball a fragment must be. */
+    cutMargin: { value: 0 },
     /** Fraction of fragments removed in the middle of the cylinder. */
     cutAmount: { value: 0 },
   };
@@ -54,6 +78,7 @@ export class Cutaway {
           uniform vec3 cutStart;
           uniform vec3 cutEnd;
           uniform float cutRadius;
+          uniform float cutMargin;
           uniform float cutAmount;
           float cutBayer4(vec2 p) {
             int i = int(mod(p.x, 4.0)) + int(mod(p.y, 4.0)) * 4;
@@ -65,10 +90,12 @@ export class Cutaway {
           '#include <clipping_planes_fragment>',
           `#include <clipping_planes_fragment>
           {
+            // Keep in sync with cutawayWeight() below.
             vec3 seg = cutEnd - cutStart;
             float h = dot(vCutWorld - cutStart, seg) / max(dot(seg, seg), 1e-4);
-            // Only between the camera and the ball; what lies past the ball stays solid.
-            if (h > 0.0 && h < 1.0) {
+            vec2 cutFlat = seg.xz / max(length(seg.xz), 1e-4);
+            float pastBall = dot(vCutWorld.xz - cutEnd.xz, cutFlat);
+            if (h > 0.0 && pastBall < -cutMargin) {
               float d = length(vCutWorld - cutStart - seg * h);
               float amount = cutAmount * smoothstep(cutRadius, cutRadius * 0.7, d);
               if (cutBayer4(gl_FragCoord.xy) < amount) discard;
@@ -88,6 +115,7 @@ export class Cutaway {
     u.cutStart.value.copy(camera);
     u.cutEnd.value.copy(ball);
     u.cutRadius.value = opts.radius;
+    u.cutMargin.value = opts.margin;
     u.cutAmount.value = this.strength * opts.amount;
     return this.strength > 0;
   }

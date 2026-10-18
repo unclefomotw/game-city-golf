@@ -209,7 +209,8 @@ if (params.has('debug')) import('./debug/tuning').then((m) => m.createTuningPane
 let last = performance.now();
 let lastPhase: Phase = game.phase;
 function frame(now: number): void {
-  const dt = Math.min((now - last) / 1000, 0.1);
+  // rAF timestamps can precede the startup performance.now(), so never step backwards.
+  const dt = THREE.MathUtils.clamp((now - last) / 1000, 0, 0.1);
   last = now;
 
   const simEvents = game.update(dt);

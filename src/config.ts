@@ -18,7 +18,7 @@ export const config = {
     maxSpin: 9,
     ballRadius: 0.3,
     /** Launch speed at full power. */
-    maxLaunchSpeed: 42,
+    maxLaunchSpeed: 36,
     /** Restitution (bounciness) per non-building surface; buildings use `materials`. */
     restitution: { ground: 0.45, boundary: 0.08 },
     /** Fraction of tangential speed kept on each bounce. */
@@ -51,10 +51,10 @@ export const config = {
    */
   materials: {
     glass: { restitution: 0.15, bounceFriction: 0.75, minSpeed: 2, radiusScale: 1.6, speedKeptPerCell: 0.998 },
-    wood: { restitution: 0.2, bounceFriction: 0.6, minSpeed: 3, radiusScale: 1.25, speedKeptPerCell: 0.99 },
-    brick: { restitution: 0.35, bounceFriction: 0.7, minSpeed: 5, radiusScale: 1, speedKeptPerCell: 0.985 },
-    stone: { restitution: 0.5, bounceFriction: 0.75, minSpeed: 12, radiusScale: 0.75, speedKeptPerCell: 0.97 },
-    metal: { restitution: 0.7, bounceFriction: 0.85, minSpeed: 25, radiusScale: 0.5, speedKeptPerCell: 0.95 },
+    wood: { restitution: 0.2, bounceFriction: 0.6, minSpeed: 4, radiusScale: 1.25, speedKeptPerCell: 0.99 },
+    brick: { restitution: 0.35, bounceFriction: 0.7, minSpeed: 7, radiusScale: 1, speedKeptPerCell: 0.985 },
+    stone: { restitution: 0.5, bounceFriction: 0.75, minSpeed: 15, radiusScale: 0.75, speedKeptPerCell: 0.965 },
+    metal: { restitution: 0.7, bounceFriction: 0.85, minSpeed: 21, radiusScale: 0.5, speedKeptPerCell: 0.9 },
   },
   preview: {
     /** SHOT-5: only a short stretch of the trajectory is previewed. */

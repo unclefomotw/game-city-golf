@@ -21,7 +21,7 @@
 | 調參面板 | lil-gui，只在網址帶 `?debug` 時載入 | SHOT-4, ACC-1 | ADR-006 |
 | 測試 | Vitest（純邏輯單元測試） | ACC-1 | — |
 | 格式與 lint | Biome（`npm run check` 一次跑完格式、lint、型別檢查、測試） | — | ADR-009 |
-| 部署 | 暫不部署；試玩透過區網內的開發伺服器（`dist/` 是純靜態檔，日後可放到任何靜態主機） | PLT-1, ACC-1 | ADR-005 |
+| 部署 | 推送版本 tag 時由 GitHub Actions 部署到 GitHub Pages（`https://unclefomotw.github.io/game-city-golf/`）；開發中的試玩仍透過區網內的開發伺服器 | PLT-1, ACC-1 | ADR-005 |
 
 ## 模組結構
 

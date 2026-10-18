@@ -78,13 +78,15 @@
 
 ## ADR-005：部署到 GitHub Pages
 
-- 狀態：擱置（2026-10-17，使用者目前不打算公開部署，已移除 workflow；需要時再恢復）
+- 狀態：採用（2026-10-17 曾擱置並移除 workflow；2026-10-18 repo 公開後恢復，改為只在推送版本 tag 時部署）
 - 日期：2026-10-16
 - 相關 spec：PLT-1, ACC-1
 
 **背景**：使用者要在手機和桌機上實際遊玩驗收，需要一個固定網址。
 
-**決定**：用 GitHub Actions 在推送到 main 後自動建置並部署到 GitHub Pages。
+**決定**：用 GitHub Actions 在推送版本 tag（`v*`）時執行 `npm run check`、建置並部署到 GitHub Pages，網址為 `https://unclefomotw.github.io/game-city-golf/`。推送到 main 不會更新網站。
+
+**理由（觸發時機）**：公開網址上的版本應該對應已驗收、有版本號的里程碑，而不是 main 上的每個中間狀態；tag 本來就只在使用者要求時才打，所以「何時更新網站」也由使用者決定。GitHub 的 `github-pages` environment 預設只允許 main 部署，需要在 repo 的 Settings → Environments 加上 `v*` 的 tag 規則。
 
 **理由**：免費，不需要額外帳號，而且和 repo 綁在一起。開發期間另外可以用 `vite --host` 在區網內直接用手機測試。
 

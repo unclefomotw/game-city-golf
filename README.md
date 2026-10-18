@@ -2,6 +2,8 @@
 
 在粗糙的 3D 方塊城市裡打高爾夫：一桿一桿把球打到終點，球撞到的建築會被打穿、打爛。
 
+**線上試玩：<https://unclefomotw.github.io/game-city-golf/>**（最新的版本 tag）
+
 - 產品規格：[`doc/spec.md`](doc/spec.md)
 - 實作文件：[`doc/implementation/`](doc/implementation/README.md)
 - Coding agent 規則：[`AGENTS.md`](AGENTS.md)

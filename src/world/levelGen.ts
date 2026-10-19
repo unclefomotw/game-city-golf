@@ -38,13 +38,19 @@ export const DEFAULT_LEVEL_OPTIONS: LevelOptions = { sizeX: 72, sizeY: 40, sizeZ
 export const TEE = { x: 1.5, z: 1.5 };
 /** No building voxel may come closer than this to the tee center (horizontal, per axis). */
 export const TEE_CLEARANCE = 5;
-/** Share of the ground covered by the scattered footprints; breaking long lines adds roughly 10 points more. */
-export const COVERAGE = 0.3;
-/** Longest straight line of open ground along x or z, in cells (must stay below the field size). */
-export const MAX_OPEN_RUN = 36;
+/**
+ * Share of the ground covered by the scattered footprints, drawn per map as a
+ * two-digit decimal in [min, max]; breaking long lines adds roughly 7 points more.
+ */
+export const COVERAGE = { min: 0.27, max: 0.32 };
+/** Longest straight line of open ground along x or z, as a share of the shorter field side (must stay below 1). */
+export const MAX_OPEN_RUN_SHARE = 0.54;
+/** Longest straight line of open ground along x or z, in cells. */
+export const maxOpenRun = ({ sizeX, sizeZ }: Pick<LevelOptions, 'sizeX' | 'sizeZ'>) =>
+  Math.round(Math.min(sizeX, sizeZ) * MAX_OPEN_RUN_SHARE);
 /** Building footprint side length range, in cells. */
 const RECT_MIN = 3;
-const RECT_MAX = 12;
+const RECT_MAX = 10;
 const REPAIR_RECT_MAX = 5;
 const GOAL_RADIUS = 3;
 /** The goal center is at least this share of the farthest possible goal distance from the tee. */
@@ -110,7 +116,7 @@ export function generateLevel(seed: number, opts: LevelOptions = DEFAULT_LEVEL_O
 }
 
 /**
- * Scatters building footprints (they may overlap) until COVERAGE is reached,
+ * Scatters building footprints (they may overlap) until a coverage drawn from COVERAGE is reached,
  * then adds more wherever a row or column still has a long open stretch, so
  * no straight street runs from one boundary to the other.
  */
@@ -163,11 +169,13 @@ function tryGenerate(seed: number, rng: Rng, opts: LevelOptions): Level | null {
     return { x0, z0, x1: x0 + w, z1: z0 + d };
   };
 
-  const target = COVERAGE * sizeX * sizeZ;
+  const coverage = rng.int(Math.round(COVERAGE.min * 100), Math.round(COVERAGE.max * 100)) / 100;
+  const target = coverage * sizeX * sizeZ;
   for (let tries = 0; coveredCount < target && tries < 10000; tries++)
     place(randomRect(rng.int(0, sizeX - 1), rng.int(0, sizeZ - 1)));
 
-  // Break every straight open line longer than MAX_OPEN_RUN with another footprint near its middle.
+  // Break every straight open line longer than maxOpenRun with another footprint near its middle.
+  const maxRun = maxOpenRun(opts);
   const isOpen = (x: number, z: number) => !covered[x + z * sizeX];
   const reserved = (x: number, z: number) => {
     const cell = { x0: x, z0: z, x1: x + 1, z1: z + 1 };
@@ -180,7 +188,7 @@ function tryGenerate(seed: number, rng: Rng, opts: LevelOptions): Level | null {
       for (let i = 0; i <= n; i++) {
         if (i < n && isOpen(...cell(i))) continue;
         const len = i - start;
-        if (len > MAX_OPEN_RUN) {
+        if (len > maxRun) {
           const middle = [];
           for (let k = start + Math.floor(len / 3); k < start + Math.ceil((2 * len) / 3); k++)
             if (!reserved(...cell(k))) middle.push(cell(k));

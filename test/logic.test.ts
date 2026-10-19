@@ -17,7 +17,7 @@ import {
   generateLevel,
   isSolvable,
   MATERIAL_PALETTES,
-  MAX_OPEN_RUN,
+  maxOpenRun,
   TEE,
   TEE_CLEARANCE,
 } from '../src/world/levelGen';
@@ -87,7 +87,8 @@ describe('level generation', () => {
   });
 
   it('LVL-1: no straight open line runs from one boundary to the other', () => {
-    expect(MAX_OPEN_RUN).toBeLessThan(DEFAULT_LEVEL_OPTIONS.sizeX);
+    const maxRun = maxOpenRun(DEFAULT_LEVEL_OPTIONS);
+    expect(maxRun).toBeLessThan(Math.min(DEFAULT_LEVEL_OPTIONS.sizeX, DEFAULT_LEVEL_OPTIONS.sizeZ));
     for (let seed = 0; seed < 40; seed++) {
       const { grid } = generateLevel(seed);
       for (let a = 0; a < grid.sizeX; a++) {
@@ -96,7 +97,7 @@ describe('level generation', () => {
         for (let b = 0; b < grid.sizeX; b++) {
           row = grid.isSolid(b, 0, a) ? 0 : row + 1;
           col = grid.isSolid(a, 0, b) ? 0 : col + 1;
-          expect(Math.max(row, col)).toBeLessThanOrEqual(MAX_OPEN_RUN);
+          expect(Math.max(row, col)).toBeLessThanOrEqual(maxRun);
         }
       }
     }
@@ -108,8 +109,8 @@ describe('level generation', () => {
       let solid = 0;
       for (let x = 0; x < grid.sizeX; x++) for (let z = 0; z < grid.sizeZ; z++) if (grid.isSolid(x, 0, z)) solid++;
       const share = solid / (grid.sizeX * grid.sizeZ);
-      expect(share).toBeGreaterThanOrEqual(COVERAGE);
-      expect(share).toBeLessThan(COVERAGE + 0.2);
+      expect(share).toBeGreaterThanOrEqual(COVERAGE.min);
+      expect(share).toBeLessThan(COVERAGE.max + 0.2);
     }
   });
 

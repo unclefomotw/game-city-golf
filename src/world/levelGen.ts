@@ -206,8 +206,8 @@ function tryGenerate(seed: number, rng: Rng, opts: LevelOptions): Level | null {
   // Paint draws from its own stream so colours never shift the shape of the city.
   const paintRng = createRng((seed ^ 0x5bd1e995) >>> 0);
   for (const r of footprints) {
-    const tall = rng.chance(0.2);
-    const height = Math.min(sizeY - 8, tall ? rng.int(18, 30) : rng.int(4, 14));
+    const tall = rng.chance(0.24);
+    const height = Math.min(sizeY - 8, tall ? rng.int(17, 28) : rng.int(4, 14));
     const id = buildings.length;
     const material = pickMaterial(rng, MATERIAL_WEIGHTS[tall ? 'tall' : 'low']);
     buildings.push({ id, material, color: paintRng.pick(MATERIAL_PALETTES[material]) });

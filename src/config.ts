@@ -28,7 +28,7 @@ export const config = {
     /** Fraction of spin kept after a contact. */
     contactSpinRetain: 0.5,
     /** Rolling deceleration while resting on a surface. */
-    rollingFriction: 9,
+    rollingFriction: 7.5,
     /** Normal speed below which a contact counts as rolling instead of bouncing. */
     rollThreshold: 2.0,
     stopSpeed: 0.35,
